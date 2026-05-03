@@ -94,6 +94,15 @@ const char* html = R"rawliteral(
                 el.style.color = isPaired ? 'green' : 'red';
             }
         </script>
+
+        <div class="status" style="margin-top: 30px;">
+            <h3>WiFi Settings</h3>
+            <form action="/setwifi" method="POST">
+                <input name="ssid" placeholder="SSID" required style="padding:5px; margin:5px;"><br>
+                <input name="pass" type="password" placeholder="Password" required style="padding:5px; margin:5px;"><br>
+                <button type="submit" style="background:gray; color:white;">Save & Reboot</button>
+            </form>
+        </div>
     </body>
     </html>
 )rawliteral";

@@ -107,17 +107,24 @@ void saveRole(const uint8_t *mac, String role) {
 }
 
 void initNetwork() {
-    // Only call this in setup()
     connectWiFi();
-    if (setupMode) {
-        server.on("/", handleRoot_AP);
-        server.on("/setwifi", handleSetWiFi);
-    } else {
-        server.on("/", handleRoot);
-        server.on("/control", handleControl);
-        webSocket.onEvent(onWebSocketEvent);
-        webSocket.begin();
-    }
+    
+    // Register these routes regardless of mode
+    server.on("/", handleRoot);
+    server.on("/setwifi", handleSetWiFi);
+    
+    // Only register control/websocket routes if we are connected
+    // (Optional: keep them globally accessible if you want control in AP mode too)
+    server.on("/control", handleControl);
+    server.on("/pair", []() { 
+        pairingMode = true; 
+        server.send(200, "text/plain", "Pairing Mode Active"); 
+    });
+    server.on("/status", []() { /* ... existing logic ... */ });
+    server.on("/clear_remotes", []() { /* ... existing logic ... */ });
+    
+    webSocket.onEvent(onWebSocketEvent);
+    webSocket.begin();
     server.begin();
 }
 
@@ -131,10 +138,6 @@ void startAPMode() {
 
 void handleRoot() {
   server.send(200, "text/html", html);
-}
-
-void handleRoot_AP() {
-    server.send(200, "text/html", "<h1>Enter WiFi Credentials</h1><form action='/setwifi' method='post'>SSID: <input name='ssid'><br>Password: <input name='pass' type='password'><br><input type='submit' value='Save'></form>");
 }
 
 void processCommand(String cmd) {
