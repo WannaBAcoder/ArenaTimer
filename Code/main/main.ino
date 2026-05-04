@@ -182,6 +182,20 @@ void handleControl() {
     server.send(200, "text/plain", "OK");
 }
 
+// INSERT NEW FUNCTION HERE:
+void handleSetTime() {
+    int m = server.arg("m").toInt();
+    int s = server.arg("s").toInt();
+    
+    current_time = (m * 60) + s;
+    is_running = false; 
+    
+    updateClient();
+    updateLEDs();
+    
+    server.send(200, "text/plain", "Time Updated");
+}
+
 void updateClient() {
   int minutes = current_time / 60;
   int seconds = current_time % 60;
@@ -378,6 +392,7 @@ void handleSetWiFi() {
     String pass = server.arg("pass");
     
     if (ssid.length() > 0 && pass.length() > 0) {
+        ssid = ssid;
         preferences.begin("wifi", false);
         preferences.putString("ssid", ssid);
         preferences.putString("pass", pass);
@@ -393,7 +408,7 @@ void handleSetWiFi() {
 
 void connectWiFi() {
     preferences.begin("wifi", true);
-    String ssid = preferences.getString("ssid", "");
+    String ssid = preferences.getString("ssid", "Disconnected");
     String pass = preferences.getString("pass", "");
     preferences.end();
     
@@ -524,13 +539,16 @@ void setup() {
         server.send(200, "text/plain", "Pairing Mode Active"); 
     });
 
+    // INSERT NEW ROUTE HERE:
+    server.on("/settime", handleSetTime);
+
     server.on("/status", []() {
         String json = "{";
         json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
         json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
         json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
         json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
-        json += "\"readyRequired\":" + String(readyRequired ? "true" : "false"); // Add this
+        json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
         json += "}";
         server.send(200, "application/json", json);
     });

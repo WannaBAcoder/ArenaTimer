@@ -36,7 +36,6 @@ extern Preferences preferences;
 const float scrollInterval = 1000.0 / BORDER_LED_COUNT;
 const unsigned long debounceDelay = 200;
 
-
 // Add the struct definition
 typedef struct struct_message {
     char deviceType[15];
