@@ -4,6 +4,7 @@
 #include "browser.h"
 #include "config.h"
 #include "display.h"
+#include "timerLogic.h"
 
 Preferences preferences;
 
@@ -13,15 +14,12 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 
 const char* apSSID = "TimerSetup";
 const char* apPassword = "12345678";
-bool setupMode = false;
 
 int countdown_time = 120; // Default to 2 minutes (120 seconds)
 int current_time = countdown_time;
-bool is_running = false;
 bool timeSelState = false;
 bool blueReady = false;
 bool redReady = false;
-bool preCountdownRunning = false;
 bool readyRequired = false; // default to requiring ready-up
 
 bool border_toggle = 1;
@@ -32,13 +30,6 @@ uint8_t redMAC[6], blueMAC[6], judgeMAC[6];
 bool redPaired = false, bluePaired = false, judgePaired = false;
 struct_message incoming;
 
-// Debounce variables for each button
-unsigned long lastDebounceTimeStart = 0;
-unsigned long lastDebounceTimePause = 0;
-unsigned long lastDebounceTimeReset = 0;
-unsigned long lastDebounceTimeTimeSel = 0;
-unsigned long lastDebounceTimeBlue = 0;
-unsigned long lastDebounceTimeRed = 0;
 
 unsigned long lastCountdownTime = 0;
 
@@ -47,6 +38,8 @@ int countdown = 3; //number of seconds until match start
 int scrollIndex = 0;
 unsigned long lastScrollTime = 0;
 volatile bool needsLEDUpdate = false;
+
+int currentState = CONNECTING;
 
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   memcpy(&incoming, data, sizeof(incoming));
@@ -108,24 +101,44 @@ void saveRole(const uint8_t *mac, String role) {
 
 void initNetwork() {
     connectWiFi();
-    
-    // Register these routes regardless of mode
+
+    // 1. Static Web Page
     server.on("/", handleRoot);
+
+    // 2. Control & Configuration Routes
+    server.on("/control", handleControl);
+    server.on("/settime", handleSetTime);
     server.on("/setwifi", handleSetWiFi);
     
-    // Only register control/websocket routes if we are connected
-    // (Optional: keep them globally accessible if you want control in AP mode too)
-    server.on("/control", handleControl);
+    // 3. Remote Pairing Logic
     server.on("/pair", []() { 
         pairingMode = true; 
+        Serial.println("[SYSTEM] Pairing Mode Active");
         server.send(200, "text/plain", "Pairing Mode Active"); 
     });
-    server.on("/status", []() { /* ... existing logic ... */ });
-    server.on("/clear_remotes", []() { /* ... existing logic ... */ });
-    
+
+    server.on("/clear_remotes", []() {
+        clearRemotes();
+        server.send(200, "text/plain", "Remotes Wiped");
+    });
+
+    // 4. System Status (Fixed JSON formatting)
+    server.on("/status", []() {
+        String json = "{";
+        json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
+        json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
+        json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
+        json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
+        json += "\"readyRequired\":" + String(readyRequired ? "true" : "false"); // No trailing comma
+        json += "}";
+        server.send(200, "application/json", json);
+    });
+
+    // 5. Start Communication Services
     webSocket.onEvent(onWebSocketEvent);
     webSocket.begin();
     server.begin();
+    Serial.println("[SYSTEM] HTTP Server and WebSocket Started");
 }
 
 void startAPMode() {
@@ -133,34 +146,10 @@ void startAPMode() {
     WiFi.softAP(apSSID, apPassword);
     Serial.print("AP IP Address: ");
     Serial.println(WiFi.softAPIP());
-    setupMode = true;
 }
 
 void handleRoot() {
   server.send(200, "text/html", html);
-}
-
-void processCommand(String cmd) {
-    if (cmd == "start") {
-        starPreCountdown();
-    } 
-    else if (cmd == "pause") {
-        is_running = false;
-    } 
-    else if (cmd == "reset" && !is_running) {
-        is_running = false;
-        blueReady = redReady = false;
-        current_time = countdown_time;
-        setBorder();
-        updateClient();
-        updateLEDs();
-    } 
-    else if (cmd == "switch" && !is_running) {
-        countdown_time = (countdown_time == 120) ? 180 : 120;
-        current_time = countdown_time;
-        updateClient();
-        updateLEDs();
-    }
 }
 
 void handleControl() {
@@ -173,7 +162,9 @@ void handleControl() {
         preferences.begin("settings", false);
         preferences.putBool("readyRequired", readyRequired);
         preferences.end();
-        setBorder();
+
+        if(currentState != RUNNING)
+          setBorder();//only reflect when the timer is paused/not running
     } else {
         // Everything else uses the shared logic
         processCommand(cmd);
@@ -188,7 +179,7 @@ void handleSetTime() {
     int s = server.arg("s").toInt();
     
     current_time = (m * 60) + s;
-    is_running = false; 
+    currentState = IDLE;
     
     updateClient();
     updateLEDs();
@@ -202,185 +193,6 @@ void updateClient() {
   char buffer[6];
   snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, seconds);
   webSocket.broadcastTXT(buffer);
-}
-
-void updateTimer() {
-  unsigned long currentMillis = millis();
-  
-  if (preCountdownRunning) {
-    if (currentMillis - lastScrollTime >= scrollInterval) {
-      lastScrollTime = currentMillis;
-
-      // Fill from 0 to scrollIndex with ORANGE
-      for (int i = 0; i < BORDER_LED_COUNT; i++) {
-        if (i >= scrollIndex) {
-          setBorderLEDs(i, ORANGE);
-        } 
-        else {
-          setBorderLEDs(i, CRGB::Black);
-        }
-      }
-
-      FastLED.show();
-
-      scrollIndex--;
-      if (scrollIndex < 0) {
-        scrollIndex = BORDER_LED_COUNT - 1;
-        countdown--;
-
-        if (countdown <= 0) {
-          // countdown is done, start timer
-          countdown = 3;
-          preCountdownRunning = false;
-          scrollIndex = BORDER_LED_COUNT - 1;
-          lastCountdownTime = 0;
-          lastScrollTime = 0;
-          is_running = true;
-          lastCountdownTime = millis();
-
-          if (!is_running && current_time == countdown_time) {
-            current_time = countdown_time + 1;
-          }
-
-          // Set border LEDs
-          for (int i = 0; i < BORDER_LED_COUNT/2; i++) {
-            setBorderLEDs(i, CRGB::Blue); // First half blue
-          }
-
-          // Set border LEDs
-          for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT ; i++) {
-            setBorderLEDs(i, CRGB::Red); // First half red
-          }
-
-          FastLED.show(); // show the initialized border LED colors
-
-          updateClient();
-          updateLEDs();
-          return; // stop here — don't draw the digit again
-        }
-
-        // only draw digit if countdown > 0
-        setDigit(0, 0, false);
-        setDigit(0, 49, false);
-        setColon();
-        setDigit(countdown, 101, true);
-        setDigit(0, 150, true);
-        FastLED.show();
-      }
-    }
-  }
-
-  // Main timer counting down
-  if (is_running && current_time > 0) {
-    // Countdown every 1 second
-    if (currentMillis - lastCountdownTime >= 1000) {
-      lastCountdownTime = currentMillis;
-      current_time--;
-      
-      updateClient();  // Reset to 2:00 (or 3:00)
-      updateLEDs();
-    }
-  }
-
-  else {
-    is_running = false;
-  }
-}
-
-void setTeamReady(String team) {
-    if (team == "Blue") {
-        blueReady = true;
-        for (int i = 0; i < BORDER_LED_COUNT/2; i++) {
-            setBorderLEDs(i, CRGB::Blue);
-        }
-    } else if (team == "Red") {
-        redReady = true;
-        for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT; i++) {
-            setBorderLEDs(i, CRGB::Red);
-        }
-    }
-    
-    needsLEDUpdate = true;
-}
-
-void checkButtons() {
-  unsigned long currentMillis = millis();
-
-  // Start button
-  if (digitalRead(START_BTN) == LOW && currentMillis - lastDebounceTimeStart > debounceDelay) {
-
-    starPreCountdown();
-    lastDebounceTimeStart = currentMillis;  // Update debounce time
-  }
-
-  // Pause button
-  if (digitalRead(PAUSE_BTN) == LOW && currentMillis - lastDebounceTimePause > debounceDelay) {
-    is_running = false;
-    lastDebounceTimePause = currentMillis;
-  }
-
-  if(readyRequired) {
-    // Blue Ready button
-    if (digitalRead(BLUE_BTN) == LOW && (millis() - lastDebounceTimeBlue > debounceDelay)) {
-        setTeamReady("Blue");
-        lastDebounceTimeBlue = millis();
-    }
-
-    // Red Ready button
-    if (digitalRead(RED_BTN) == LOW && (millis() - lastDebounceTimeRed > debounceDelay)) {
-        setTeamReady("Red");
-        lastDebounceTimeRed = millis();
-    }
-  }
-
-  // Reset button
-  if (digitalRead(RESET_BTN) == LOW && (currentMillis - lastDebounceTimeReset > debounceDelay) 
-                  && !is_running) {
-    is_running = false;
-    current_time = countdown_time;
-    blueReady = false;
-    redReady = false;
-    setBorder();
-    updateClient();
-    updateLEDs();
-    lastDebounceTimeReset = currentMillis;
-  }
-
-  // Time select switch
-  if (digitalRead(TIME_SEL_SW) == LOW && (currentMillis - lastDebounceTimeTimeSel > debounceDelay)  
-                  && !is_running) {
-    timeSelState = !timeSelState;
-    countdown_time = timeSelState ? 180 : 120;
-    current_time = countdown_time;
-
-    preferences.begin("settings", false);  // read-write
-    preferences.putBool("timeSelState", timeSelState);
-    preferences.end();
-
-    updateClient();
-    updateLEDs();
-    lastDebounceTimeTimeSel = currentMillis;
-  }
-}
-
-void starPreCountdown() {
-  if(!is_running && (!readyRequired || (blueReady && redReady))){
-      countdown = 3;
-      scrollIndex = BORDER_LED_COUNT - 1;
-      preCountdownRunning = true; // Initiate the pre-countdown
-      // Use ternary operation to set border LEDs to orange or black
-      for (int i = 0; i < BORDER_LED_COUNT; i++) {
-        setBorderLEDs(i, ORANGE);
-      }
-
-      setDigit(0, 0, false);
-      setDigit(0, 49, false);
-      setColon();
-      setDigit(countdown, 101, true);
-      setDigit(0, 150, true);
-
-      FastLED.show();
-    }
 }
 
 void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -458,6 +270,8 @@ void connectWiFi() {
         Serial.println("Failed to connect, starting AP mode...");
         startAPMode();
     }
+
+    currentState = IDLE;
 }
 
 void clearRemotes() {
@@ -483,7 +297,7 @@ void clearRemotes() {
     Serial.println("[SYSTEM] All remotes wiped.");
 }
 
-void loadPairingStatus() {
+void loadSavedSettings() {
     preferences.begin("bot-timer", true); // Open read-only
     
     // Check if the keys exist and have data (returning 6 bytes means it was stored)
@@ -498,26 +312,31 @@ void loadPairingStatus() {
                   redPaired ? "PAIRED" : "OPEN", 
                   bluePaired ? "PAIRED" : "OPEN", 
                   judgePaired ? "PAIRED" : "OPEN");
+
+    preferences.begin("settings", true);  // read-only
+    readyRequired = preferences.getBool("readyRequired", false); 
+    timeSelState = preferences.getBool("timeSelState", false); 
+    preferences.end();
+
+    countdown_time = timeSelState ? 180 : 120;
+    current_time = countdown_time;
 }
 
 void setup() {
   Serial.begin(115200);
-  
-  loadPairingStatus();
 
-  preferences.begin("settings", true);  // read-only
-  readyRequired = preferences.getBool("readyRequired", false); 
-  timeSelState = preferences.getBool("timeSelState", false); 
-  preferences.end();
+  // Load saved Settings
+  loadSavedSettings();
 
-  // Initialize LED strips
+  // Initialize LED Display
   initDisplay();
+
+  //Initialize Network
   initNetwork();
   
-  countdown_time = timeSelState ? 180 : 120;
-  current_time = countdown_time;
   updateLEDs();//update the text LEDs
   setBorder();//start the border on
+  FastLED.show();
 
   // Set up the buttons and switch pins
   pinMode(RESET_BTN, INPUT_PULLUP);
@@ -531,72 +350,61 @@ void setup() {
         Serial.println("Error initializing ESP-NOW");
         return;
     }
-    esp_now_register_recv_cb(OnDataRecv);
     
-    // Add endpoint for pairing trigger
-    server.on("/pair", []() { 
-        pairingMode = true; 
-        server.send(200, "text/plain", "Pairing Mode Active"); 
-    });
-
-    // INSERT NEW ROUTE HERE:
-    server.on("/settime", handleSetTime);
-
-    server.on("/status", []() {
-        String json = "{";
-        json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
-        json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
-        json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
-        json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
-        json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
-        json += "}";
-        server.send(200, "application/json", json);
-    });
-
-  server.on("/clear_remotes", []() {
-    clearRemotes();
-    server.send(200, "text/plain", "Remotes Wiped");
-  });
-
-  // 1. Timer & LED Task
+  esp_now_register_recv_cb(OnDataRecv);
+    
   xTaskCreate(
-      [](void*) {
-          TickType_t lastWakeTime = xTaskGetTickCount();
-          while (true) {
-              // Timer Logic
-              if (is_running || preCountdownRunning) {
-                  updateTimer();
-              }
-              
-              // LED Refresh Consumer
-              if (needsLEDUpdate) {
-                  FastLED.show();
-                  needsLEDUpdate = false;
-              }
+    [](void*) {
+        TickType_t lastWakeTime = xTaskGetTickCount();
+        while (true) {
+
+          switch(currentState)
+          {
+            case IDLE:
+            break;
+
+            case PRE_COUNTDOWN_INIT:
+              startPreCountdown();
+            break;
+
+            case PRE_COUNTDOWN_LOOP:
+              handlePreCountdownAnimation();
+            break;
+
+            case RUNNING:
+              updateTimer();
+            break;
+
+            case PAUSED:
+              handlePausedBlink();
+            break;
+
+            case FINISHED:
+            break;
+
+            case CLOCK_MODE:
+            break;
           
-              vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(1));
           }
-      },
-      "TimerTask",
-      4096,
-      nullptr,
-      1,
-      nullptr
+
+          // LED Refresh Consumer
+          if (needsLEDUpdate) {
+              FastLED.show();
+              needsLEDUpdate = false;
+          }
+          vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(1));
+        }
+    },"TimerTask",4096, nullptr, 1,nullptr
   );
 
   // 2. Button Polling Task
   xTaskCreate(
-      [](void*) {
-          while (true) {
-              checkButtons();
-              vTaskDelay(pdMS_TO_TICKS(50));
-          }
-      },
-      "ButtonCheckTask",
-      2048,
-      nullptr,
-      1,
-      nullptr
+    [](void*) {
+        while (true) {
+            checkButtons();
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
+    },"ButtonCheckTask",2048,nullptr,1,nullptr
   );
 }
 

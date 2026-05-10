@@ -5,6 +5,7 @@
 #include <FastLED.h>
 #include <Preferences.h>
 #include <esp_now.h> // Add this include
+#include <time.h>
 
 // Pin assignments
 #define RESET_BTN 12
@@ -29,6 +30,12 @@
 #define HALF_BORDER (BORDER_LED_COUNT / 2)
 #define PHYSICAL_STRIP_LEN (HALF_DIGIT + HALF_BORDER)
 
+// NTP Settings
+const char* ntpServer = "pool.ntp.org";
+// Example for US Central Time: "CST6CDT,M3.2.0,M11.1.0"
+// You can change this string based on your local timezone
+const char* timezoneConfig = "CST6CDT,M3.2.0,M11.1.0";
+
 // Global Objects
 extern Preferences preferences;
 
@@ -48,13 +55,25 @@ extern bool redPaired, bluePaired, judgePaired;
 
 // Add these to Config.h
 extern int current_time;
-extern bool is_running;
 extern bool readyRequired;
 extern bool preCountdownRunning;
 
 extern int countdown_time;
 extern bool blueReady;
 extern bool redReady;
+
+enum timerState {
+    CONNECTING,
+    IDLE,
+    PRE_COUNTDOWN_INIT,
+    PRE_COUNTDOWN_LOOP,
+    RUNNING,
+    PAUSED,
+    FINISHED,
+    CLOCK_MODE
+};
+
+extern int currentState;
 
 // Function prototypes for functions defined in other modules
 void starPreCountdown(); // Defined in TimerLogic
