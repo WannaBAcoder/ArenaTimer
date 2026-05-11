@@ -22,7 +22,7 @@ const char* html = R"rawliteral(
             
             /* Visual lockout styles */
             .disabled-ui { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
-            .blocked-feature { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
+            .blocked-feature { opacity: 0.4; pointer-events: none; cursor: not-allowed; filter: grayscale(1); }
             
             input[type="range"] { width: 80%; margin-top: 10px; }
             input[type="color"] { vertical-align: middle; cursor: pointer; }
@@ -43,14 +43,14 @@ const char* html = R"rawliteral(
             <div>
                 <button id="startBtn" onclick="controlTimer('start')" style="background:green; color:white;">Start</button>
                 <button id="pauseBtn" onclick="controlTimer('pause')" style="background:orange;">Pause</button>
-                <button id="resetBtn" onclick="controlTimer('reset')" style="background:gray; color:white;">Reset</button>
+                <button id="resetBtn" onclick="controlTimer('reset')" style="background:#8b0000; color:white;">Reset</button>
                 <button id="switchBtn" onclick="toggleTime()" style="background:blue; color:white;">Switch 2/3m</button>
             </div>
         </div>
 
         <div id="pairingBanner">PAIRING MODE ACTIVE...</div>
         
-        <div class="status">
+        <div id="systemStatusSection" class="status">
             <strong>System Status:</strong><br>
             Red: <span id="redStat" style="color:red;">OPEN</span> | 
             Blue: <span id="blueStat" style="color:red;">OPEN</span> | 
@@ -79,7 +79,11 @@ const char* html = R"rawliteral(
             </div>
             <div style="margin-top:15px;">
                 <label>Brightness: <br>
-                <input type="range" id="brightSlider" min="10" max="230" onchange="applyBrightness()" value="230"></label>
+                <input type="range" id="brightSlider" min="10" max="230" onchange="applyBrightness()" value="127"></label>
+            </div>
+            <div style="margin-top:15px; border-top: 1px solid #444; padding-top: 10px;">
+                <input type="checkbox" id="flipToggle" onchange="toggleFlip()"> 
+                <label for="flipToggle" style="display:inline;">Flip Display (Upside Down)</label>
             </div>
         </div>
 
@@ -101,6 +105,16 @@ const char* html = R"rawliteral(
                 document.getElementById('countdown').textContent = event.data;
             };
 
+            window.onload = function() {
+                fetch('/status')
+                .then(r => r.json())
+                .then(data => {
+                    if(data.brightness !== undefined) document.getElementById('brightSlider').value = data.brightness;
+                    if(data.digitColor) document.getElementById('colorPicker').value = "#" + data.digitColor;
+                    if(data.displayInverted !== undefined) document.getElementById('flipToggle').checked = data.displayInverted;
+                });
+            };
+
             function applyColor() {
                 const hex = document.getElementById('colorPicker').value.replace('#', '');
                 fetch(`/setcolor?hex=${hex}`);
@@ -111,15 +125,12 @@ const char* html = R"rawliteral(
                 fetch(`/setbrightness?val=${val}`);
             }
 
+            function toggleFlip() { fetch('/flip'); }
+
             function toggleClockMode() {
                 const clockToggle = document.getElementById('clockToggle');
-                const timerActive = (lastKnownState === "RUNNING" || lastKnownState === "PAUSED" || lastKnownState.includes("PRE_COUNTDOWN"));
-                
-                if (clockToggle.checked && timerActive) {
-                    clockToggle.checked = false; 
-                    return; 
-                }
-
+                const timerActive = (lastKnownState === "RUNNING" || lastKnownState === "PAUSED" || lastKnownState === "PRE_COUNTDOWN_LOOP");
+                if (clockToggle.checked && timerActive) { clockToggle.checked = false; return; }
                 isLockingUI = true; 
                 if (clockToggle.checked) {
                     const now = new Date();
@@ -129,38 +140,27 @@ const char* html = R"rawliteral(
                     controlTimer('reset');
                     updateControls(false);
                 }
-                
                 setTimeout(() => { isLockingUI = false; }, 1500);
             }
 
             function updateControls(isClock) {
                 const timerControls = document.getElementById('timerControls');
-                if (isClock) {
-                    timerControls.classList.add('disabled-ui');
-                } else {
-                    timerControls.classList.remove('disabled-ui');
-                }
+                if (isClock) timerControls.classList.add('disabled-ui');
+                else timerControls.classList.remove('disabled-ui');
             }
 
             function controlTimer(action) { fetch(`/control?cmd=${action}`); }
             function toggleTime() { fetch('/control?cmd=switch'); }
-            function toggleReady() { 
-                fetch(`/control?cmd=readytoggle&state=${document.getElementById('readyToggle').checked ? "on" : "off"}`); 
-            }
+            function toggleReady() { fetch(`/control?cmd=readytoggle&state=${document.getElementById('readyToggle').checked ? "on" : "off"}`); }
             function startPairing() { fetch('/pair'); }
-            function wipeRemotes() { 
-                if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); 
-            }
-            function applyTime() { 
-                fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); 
-            }
+            function wipeRemotes() { if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); }
+            function applyTime() { fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
             
             setInterval(() => {
                 fetch('/status')
                     .then(r => r.json())
                     .then(data => {
                         lastKnownState = data.state;
-                        
                         if (data.state !== "RUNNING" && data.state !== "PRE_COUNTDOWN_LOOP" && data.currentTime) {
                             document.getElementById('countdown').textContent = data.currentTime;
                         }
@@ -169,57 +169,54 @@ const char* html = R"rawliteral(
                         updateStatus('redStat', data.red); 
                         updateStatus('blueStat', data.blue); 
                         updateStatus('judgeStat', data.judge);
-                        document.getElementById('readyToggle').checked = data.readyRequired;
                         
-                        const isRunning = (data.state === "RUNNING" || data.state.includes("PRE_COUNTDOWN"));
+                        const isRunning = (data.state === "RUNNING" || data.state === "PRE_COUNTDOWN_LOOP");
                         const isPaused = (data.state === "PAUSED");
                         const isIdle = (data.state === "IDLE" || data.state === "FINISHED" || data.state === "CLOCK_MODE");
 
-                        // 1. TIMER BUTTON VISUALS
-                        const startBtn = document.getElementById('startBtn');
-                        const pauseBtn = document.getElementById('pauseBtn');
-                        const resetBtn = document.getElementById('resetBtn');
-
-                        if (isRunning) { resetBtn.classList.add('blocked-feature'); resetBtn.disabled = true; }
-                        else { resetBtn.classList.remove('blocked-feature'); resetBtn.disabled = false; }
-
-                        if (!isRunning) { pauseBtn.classList.add('blocked-feature'); pauseBtn.disabled = true; }
-                        else { pauseBtn.classList.remove('blocked-feature'); pauseBtn.disabled = false; }
-
-                        if (isRunning) { startBtn.classList.add('blocked-feature'); startBtn.disabled = true; }
-                        else { startBtn.classList.remove('blocked-feature'); startBtn.disabled = false; }
-
-                        // 2. TIME SETTINGS (Editable during PAUSED)
-                        const timeSection = document.getElementById('manualTimeSection');
-                        const switchBtn = document.getElementById('switchBtn');
-                        const timeInputs = ['manualMin', 'manualSec', 'setTimeBtn', 'switchBtn'];
-
-                        if (isRunning) {
-                            timeSection.classList.add('blocked-feature');
-                            switchBtn.classList.add('blocked-feature');
-                            timeInputs.forEach(id => document.getElementById(id).disabled = true);
-                        } else {
-                            timeSection.classList.remove('blocked-feature');
-                            switchBtn.classList.remove('blocked-feature');
-                            timeInputs.forEach(id => document.getElementById(id).disabled = false);
-                        }
-
-                        // 3. SYSTEM SETTINGS (Locked for RUNNING + PAUSED)
-                        // Includes Display Section
-                        const systemGroups = ['pairingControls', 'wifiSection', 'clockSection', 'readySection', 'displaySection'];
-                        const systemInputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'colorPicker', 'brightSlider'];
+                        // 1. TIMER BUTTON LOCKOUT (START, RESET, SWITCH, SET TIME)
+                        // All gray out when running, Reset/Switch also stay grayed when paused
+                        const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn'];
+                        const shouldGrayOut = isRunning || (isPaused && (lastKnownState === "PAUSED"));
                         
-                        const shouldLockSystem = !isIdle;
-
-                        systemGroups.forEach(id => {
-                            const el = document.getElementById(id);
-                            if (shouldLockSystem) el.classList.add('blocked-feature');
-                            else el.classList.remove('blocked-feature');
+                        lockGroup.forEach(id => {
+                            const btn = document.getElementById(id);
+                            if (isRunning) {
+                                btn.classList.add('blocked-feature');
+                                btn.disabled = true;
+                            } else if (isPaused && (id === 'resetBtn' || id === 'startBtn')) {
+                                // Keep reset and start active if paused
+                                btn.classList.remove('blocked-feature');
+                                btn.disabled = false;
+                            } else if (!isIdle) {
+                                btn.classList.add('blocked-feature');
+                                btn.disabled = true;
+                            } else {
+                                btn.classList.remove('blocked-feature');
+                                btn.disabled = false;
+                            }
                         });
 
-                        systemInputs.forEach(id => {
+                        document.getElementById('pauseBtn').disabled = !isRunning;
+                        if (!isRunning) document.getElementById('pauseBtn').classList.add('blocked-feature');
+                        else document.getElementById('pauseBtn').classList.remove('blocked-feature');
+
+                        // 2. SETTINGS LOCKOUT (FULL SECTION GRAY OUT)
+                        const shouldLockSettings = !isIdle;
+                        const sections = ['systemStatusSection', 'displaySection', 'wifiSection', 'manualTimeSection'];
+                        sections.forEach(id => {
                             const el = document.getElementById(id);
-                            if (el) el.disabled = shouldLockSystem;
+                            if (el) {
+                                if (shouldLockSettings) el.classList.add('blocked-feature');
+                                else el.classList.remove('blocked-feature');
+                            }
+                        });
+
+                        // 3. INDIVIDUAL INPUTS
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'colorPicker', 'brightSlider', 'flipToggle'];
+                        inputs.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.disabled = shouldLockSettings;
                         });
 
                         if (!isLockingUI) {

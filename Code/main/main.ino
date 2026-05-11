@@ -42,6 +42,8 @@ unsigned long startAttemptTime = 0;
 
 int currentState = CONNECTING;
 
+bool displayInverted = false;
+
 // main.ino Globals
 CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
@@ -145,6 +147,14 @@ void initNetwork() {
       json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
       json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
       json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
+
+      json += "\"brightness\":" + String(systemBrightness) + ",";
+      json += "\"displayInverted\":" + String(displayInverted ? "true" : "false") + ",";
+      
+      char hexColor[7];
+      // FastLED colors are stored as 0xRRGGBB
+      snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);
+      json += "\"digitColor\":\"" + String(hexColor) + "\",";
       
       int minutes = current_time / 60;
       int seconds = current_time % 60;
@@ -220,6 +230,25 @@ void initNetwork() {
       
       currentState = CLOCK_MODE;
       server.send(200, "text/plain", "Clock Seeded");
+    });
+
+    server.on("/flip", []() {
+      displayInverted = !displayInverted;
+      preferences.begin("settings", false);
+      preferences.putBool("dispInv", displayInverted);
+      preferences.end();
+
+      
+      needsLEDUpdate = true;
+     
+      if (currentState == CLOCK_MODE) {
+          handleClockMode(); 
+      } else {
+          updateLEDs();
+      }
+      
+      setBorder();
+      server.send(200, "text/plain", displayInverted ? "Inverted" : "Normal");
     });
 
     // 5. Start Communication Services
@@ -399,6 +428,9 @@ void loadSavedSettings() {
 
     systemBrightness = preferences.getUChar("brightness", 127);
     systemBrightness = constrain(systemBrightness, 10, 230); // Guard against old saved data
+
+    displayInverted = preferences.getBool("dispInv", false);
+
     FastLED.setBrightness(systemBrightness);
 
     uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000);

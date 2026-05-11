@@ -122,15 +122,27 @@ void startPreCountdown() {
   countdown = 3;
   scrollIndex = BORDER_LED_COUNT - 1;
   lastScrollTime = millis();
-  
-  // Initial visual state
+    
+  // Fill border with warning color
   for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, ORANGE);
   
-  setDigit(0, 0, false);
-  setDigit(0, 49, false);
-  setColon();
-  setDigit(countdown, 101, true);
-  setDigit(0, 150, true);
+  // Digit Logic: Swap physical locations if display is inverted
+  if (!displayInverted) {
+      // Normal: "0" on the left, Countdown digit on the right
+      setDigit(0, 0, false);         // Left Minutes
+      setDigit(0, 49, false);        // Right Minutes
+      setColon();
+      setDigit(countdown, 101, true); // Right Seconds (The countdown digit)
+      setDigit(0, 150, true);        // Left Seconds
+  } else {
+      // Inverted: The physical "Right Seconds" (index 101) is now on the LEFT.
+      // We put the "0" there and put the countdown digit at index 0.
+      setDigit(countdown, 0, false);  // Physically Rightmost now
+      setDigit(0, 49, false);
+      setColon();
+      setDigit(0, 101, true);         // Physically Leftmost now
+      setDigit(0, 150, true);
+  }
   
   needsLEDUpdate = true;
   currentState = PRE_COUNTDOWN_LOOP; // Move to the animation loop
@@ -163,12 +175,20 @@ void handlePreCountdownAnimation() {
         return;
       }
 
-      // only draw digit if countdown > 0
-      setDigit(0, 0, false);
-      setDigit(0, 49, false);
-      setColon();
-      setDigit(countdown, 101, true);
-      setDigit(0, 150, true);
+      if (!displayInverted) {
+          setDigit(0, 0, false);
+          setDigit(0, 49, false);
+          setColon();
+          setDigit(countdown, 101, true);
+          setDigit(0, 150, true);
+      } else {
+          setDigit(countdown, 0, false);
+          setDigit(0, 49, false);
+          setColon();
+          setDigit(0, 101, true);
+          setDigit(0, 150, true);
+      }
+
       needsLEDUpdate = true;
     }
   }
@@ -256,42 +276,50 @@ void processCommand(String cmd) {
 }
 
 void setTeamReady(String team) {
+  bool flip = displayInverted;
   if (team == "Blue") {
-    blueReady = true;
-    for (int i = 0; i < BORDER_LED_COUNT/2; i++) {
-        setBorderLEDs(i, CRGB::Blue);
-    }
+      blueReady = true;
+      int start = flip ? BORDER_LED_COUNT/2 : 0;
+      int end = flip ? BORDER_LED_COUNT : BORDER_LED_COUNT/2;
+      for (int i = start; i < end; i++) setBorderLEDs(i, CRGB::Blue);
   } else if (team == "Red") {
       redReady = true;
-      for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT; i++) {
-        setBorderLEDs(i, CRGB::Red);
-      }
+      int start = flip ? 0 : BORDER_LED_COUNT/2;
+      int end = flip ? BORDER_LED_COUNT/2 : BORDER_LED_COUNT;
+      for (int i = start; i < end; i++) setBorderLEDs(i, CRGB::Red);
   }
   needsLEDUpdate = true;
 }
 
 void handleClockMode() {
   static unsigned long lastClockUpdate = 0;
-  // Only refresh the display once per second to save resources
-  if (millis() - lastClockUpdate < 1000) return;
+  if (millis() - lastClockUpdate < 1000 && !needsLEDUpdate) return;
   lastClockUpdate = millis();
 
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) return; // Pulls from the seeded system clock
+  if (!getLocalTime(&timeinfo)) return;
 
   int hour = timeinfo.tm_hour;
   int minute = timeinfo.tm_min;
 
-  // Convert 24h to 12h format for display
   if (hour == 0) hour = 12;
   if (hour > 12) hour -= 12;
 
-  // Use your existing display functions
-  setDigit(hour / 10, 0, false);
-  setDigit(hour % 10, 49, false);
-  setColon();
-  setDigit(minute / 10, 150, true);
-  setDigit(minute % 10, 101, true);
+  if (!displayInverted) {
+      // Normal: Hours on Left, Minutes on Right
+      setDigit(hour / 10, 0, false);
+      setDigit(hour % 10, 49, false);
+      setColon();
+      setDigit(minute / 10, 150, true);
+      setDigit(minute % 10, 101, true);
+  } else {
+      // Inverted: Minutes on Left (Indices 0/49), Hours on Right (Indices 150/101)
+      setDigit(minute % 10, 0, false);
+      setDigit(minute / 10, 49, false);
+      setColon();
+      setDigit(hour % 10, 150, true);
+      setDigit(hour / 10, 101, true);
+  }
   
-  needsLEDUpdate = true; // Signal main.ino to call FastLED.show()
+  needsLEDUpdate = true;
 }

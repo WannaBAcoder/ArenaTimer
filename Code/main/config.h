@@ -60,6 +60,8 @@ extern int countdown_time;
 extern bool blueReady;
 extern bool redReady;
 
+extern bool displayInverted;
+
 enum timerState {
     CONNECTING,
     IDLE,
