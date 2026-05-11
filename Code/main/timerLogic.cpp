@@ -34,23 +34,23 @@ void handleConnectingAnimation() {
   const uint8_t tailLength = 15;
 
   if (millis() - lastAnimTime >= animSpeed) {
-      lastAnimTime = millis();
+    lastAnimTime = millis();
 
     // Clear the border
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
-        setBorderLEDs(i, CRGB::Black);
+      setBorderLEDs(i, CRGB::Black);
     }
 
     // Draw the "snake"
     for (int i = 0; i < tailLength; i++) {
-        int pos = (head - i + BORDER_LED_COUNT) % BORDER_LED_COUNT;
-        // Fade the tail
-        uint8_t brightness = map(i, 0, tailLength, 255, 0);
-        setBorderLEDs(pos, ORANGE.fadeToBlackBy(255 - brightness)); // Cyan snake
+      int pos = (head - i + BORDER_LED_COUNT) % BORDER_LED_COUNT;
+      // Fade the tail
+      uint8_t brightness = map(i, 0, tailLength, 255, 0);
+      setBorderLEDs(pos, ORANGE.fadeToBlackBy(255 - brightness)); // Cyan snake
     }
 
-      head = (head + 1) % BORDER_LED_COUNT;
-      needsLEDUpdate = true;
+    head = (head + 1) % BORDER_LED_COUNT;
+    needsLEDUpdate = true;
   }
 }
 
@@ -72,7 +72,7 @@ void checkButtons() {
   // Reset button
   if (digitalRead(RESET_BTN) == LOW && (currentMillis - lastDebounceTimeReset > debounceDelay) 
                   && (currentState == FINISHED || currentState == PAUSED)) {
-      processCommand("reset");
+    processCommand("reset");
  
     lastDebounceTimeReset = currentMillis;
   }
@@ -87,53 +87,53 @@ void checkButtons() {
   if(readyRequired) {
     // Blue Ready button
     if (digitalRead(BLUE_BTN) == LOW && (currentMillis - lastDebounceTimeBlue > debounceDelay)) {
-        setTeamReady("Blue");
-        lastDebounceTimeBlue = millis();
+      setTeamReady("Blue");
+      lastDebounceTimeBlue = millis();
     }
 
     // Red Ready button
     if (digitalRead(RED_BTN) == LOW && (currentMillis - lastDebounceTimeRed > debounceDelay)) {
-        setTeamReady("Red");
-        lastDebounceTimeRed = millis();
+      setTeamReady("Red");
+      lastDebounceTimeRed = millis();
     }
   }
 }
 
 void handlePausedBlink() {
-    unsigned long currentMillis = millis();
+  unsigned long currentMillis = millis();
+  
+  if (currentMillis - lastBlinkTime >= blinkInterval) {
+    lastBlinkTime = currentMillis;
+    blinkState = !blinkState;
     
-    if (currentMillis - lastBlinkTime >= blinkInterval) {
-        lastBlinkTime = currentMillis;
-        blinkState = !blinkState;
-        
-        if (blinkState) {
-            updateLEDs(); // Redraws the digits based on current_time
-        } else {
-            // Clear only the digit LEDs (0 to 201)
-            for (int i = 0; i < DIGIT_LED_COUNT; i++) {
-                setDigitLEDs(i, CRGB::Black);
-            }
-        }
-        needsLEDUpdate = true; // Signal the Task to call FastLED.show()
+    if (blinkState) {
+        updateLEDs(); // Redraws the digits based on current_time
+    } else {
+      // Clear only the digit LEDs (0 to 201)
+      for (int i = 0; i < DIGIT_LED_COUNT; i++) {
+          setDigitLEDs(i, CRGB::Black);
+      }
     }
+    needsLEDUpdate = true; // Signal the Task to call FastLED.show()
+  }
 }
 
 void startPreCountdown() {
-    countdown = 3;
-    scrollIndex = BORDER_LED_COUNT - 1;
-    lastScrollTime = millis();
-    
-    // Initial visual state
-    for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, ORANGE);
-    
-    setDigit(0, 0, false);
-    setDigit(0, 49, false);
-    setColon();
-    setDigit(countdown, 101, true);
-    setDigit(0, 150, true);
-    
-    FastLED.show();
-    currentState = PRE_COUNTDOWN_LOOP; // Move to the animation loop
+  countdown = 3;
+  scrollIndex = BORDER_LED_COUNT - 1;
+  lastScrollTime = millis();
+  
+  // Initial visual state
+  for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, ORANGE);
+  
+  setDigit(0, 0, false);
+  setDigit(0, 49, false);
+  setColon();
+  setDigit(countdown, 101, true);
+  setDigit(0, 150, true);
+  
+  needsLEDUpdate = true;
+  currentState = PRE_COUNTDOWN_LOOP; // Move to the animation loop
 }
 
 void handlePreCountdownAnimation() {
@@ -151,7 +151,7 @@ void handlePreCountdownAnimation() {
       }
     }
 
-    FastLED.show();
+    needsLEDUpdate = true;
 
     scrollIndex--;
     if (scrollIndex < 0) {
@@ -195,99 +195,103 @@ void updateTimer() {
 }
 
 void transitionToMatch() {
-    // Only reset the time if we aren't in the middle of a match
-    // If current_time is already less than countdown_time, we leave it alone
-    if (current_time <= 0 || current_time == countdown_time) {
-        current_time = countdown_time;
-    }
+  // Only reset the time if we aren't in the middle of a match
+  // If current_time is already less than countdown_time, we leave it alone
+  if (current_time <= 0 || current_time == countdown_time) {
+      current_time = countdown_time;
+  }
 
-    lastCountdownTime = millis();
-    
-    setBorder(); 
-    updateLEDs();
-    updateClient();
-    
-    currentState = RUNNING;
+  lastCountdownTime = millis();
+  
+  setBorder(); 
+  updateLEDs();
+  updateClient();
+  
+  currentState = RUNNING;
 }
 
 void processCommand(String cmd) {
-    if (cmd == "start" && (currentState != FINISHED || currentState != CLOCK_MODE)) {
-
-    if (readyRequired && (!redReady || !blueReady)) {
+  if (cmd == "start") {
+    if (currentState == IDLE || currentState == PAUSED) {
+        
+      if (readyRequired && (!redReady || !blueReady)) {
           Serial.println("[LOCKOUT] Start denied: Drivers not ready.");
-          // Optional: Add a brief orange blink here to show why it failed
           return; 
       }
-    currentState = PRE_COUNTDOWN_INIT;
-    blinkState = true;
-  } 
-    else if (cmd == "pause" && (currentState != FINISHED || currentState != IDLE)) {
-        currentState = PAUSED;
-    } 
-    else if (cmd == "reset" && (currentState == FINISHED ||
-            currentState == PAUSED || currentState == CLOCK_MODE)) {
-        blueReady = redReady = false;
-        currentState = IDLE;
-        current_time = countdown_time;
-        blinkState = true;
-
-        setBorder();
-        updateClient();
-        updateLEDs();
-        FastLED.show();
-    } 
-    else if (cmd == "switch" && currentState != RUNNING && currentState != PAUSED) {
-        countdown_time = (countdown_time == 120) ? 180 : 120;
-        current_time = countdown_time;
-
-        bool newTimeSelState = (countdown_time == 180);
-
-        preferences.begin("settings", false);
-        preferences.putBool("timeSelState", newTimeSelState);
-        preferences.end();
-
-        updateClient();
-        updateLEDs();
+      
+      currentState = PRE_COUNTDOWN_INIT;
+      blinkState = true;
+      return; // Exit early since we handled the command
     }
+    
+    Serial.println("[LOCKOUT] Start ignored: System not in IDLE or PAUSED.");
+    return;
+  }
+  else if (cmd == "pause" && currentState == RUNNING) {
+    currentState = PAUSED;
+  } 
+  else if (cmd == "reset" && (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE)) {
+    blueReady = redReady = false;
+    currentState = IDLE;
+    current_time = countdown_time;
+    blinkState = true;
+
+    setBorder();
+    updateClient();
+    updateLEDs();
+  } 
+  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) {
+    countdown_time = (countdown_time == 120) ? 180 : 120;
+    current_time = countdown_time;
+
+    bool newTimeSelState = (countdown_time == 180);
+
+    preferences.begin("settings", false);
+    preferences.putBool("timeSelState", newTimeSelState);
+    preferences.end();
+
+    updateClient();
+    updateLEDs();
+  }
 }
 
 void setTeamReady(String team) {
-    if (team == "Blue") {
-        blueReady = true;
-        for (int i = 0; i < BORDER_LED_COUNT/2; i++) {
-            setBorderLEDs(i, CRGB::Blue);
-        }
-    } else if (team == "Red") {
-        redReady = true;
-        for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT; i++) {
-            setBorderLEDs(i, CRGB::Red);
-        }
+  if (team == "Blue") {
+    blueReady = true;
+    for (int i = 0; i < BORDER_LED_COUNT/2; i++) {
+        setBorderLEDs(i, CRGB::Blue);
     }
-    needsLEDUpdate = true;
+  } else if (team == "Red") {
+      redReady = true;
+      for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT; i++) {
+        setBorderLEDs(i, CRGB::Red);
+      }
+  }
+  needsLEDUpdate = true;
 }
 
 void handleClockMode() {
-    static unsigned long lastClockUpdate = 0;
-    // Only refresh the display once per second to save resources
-    if (millis() - lastClockUpdate < 1000) return;
-    lastClockUpdate = millis();
+  static unsigned long lastClockUpdate = 0;
+  // Only refresh the display once per second to save resources
+  if (millis() - lastClockUpdate < 1000) return;
+  lastClockUpdate = millis();
 
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) return; // Pulls from the seeded system clock
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) return; // Pulls from the seeded system clock
 
-    int hour = timeinfo.tm_hour;
-    int minute = timeinfo.tm_min;
+  int hour = timeinfo.tm_hour;
+  int minute = timeinfo.tm_min;
 
-    // Convert 24h to 12h format for display
-    if (hour == 0) hour = 12;
-    if (hour > 12) hour -= 12;
+  // Convert 24h to 12h format for display
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
 
-    // Use your existing display functions
-    setDigit(hour / 10, 0, false);
-    setDigit(hour % 10, 49, false);
-    setColon();
-    setDigit(minute / 10, 150, true);
-    setDigit(minute % 10, 101, true);
-    
-    needsLEDUpdate = true; // Signal main.ino to call FastLED.show()
+  // Use your existing display functions
+  setDigit(hour / 10, 0, false);
+  setDigit(hour % 10, 49, false);
+  setColon();
+  setDigit(minute / 10, 150, true);
+  setDigit(minute % 10, 101, true);
+  
+  needsLEDUpdate = true; // Signal main.ino to call FastLED.show()
 }

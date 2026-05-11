@@ -55,7 +55,7 @@ void setBorder() {
         for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT ; i++) 
           setBorderLEDs(i, CRGB::Red);
     } else {
-        for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB(127,127,127));
+        for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB(255, 255, 255));
     }
     needsLEDUpdate = true;
 }

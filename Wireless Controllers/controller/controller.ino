@@ -33,30 +33,24 @@ String getButtonLabel(int id) {
 
 void blastMessage(int id) {
     myData.buttonID = id;
-    Serial.printf("[!] Sending Command %d across all channels...\n", id);
+    Serial.printf("[!] Heavy Sweep for Command %d...\n", id);
 
-    // We cycle through 1 to 11. 
-    // (Channels 12-14 are restricted in some regions, so 1-11 is safest)
     for (int ch = 1; ch <= 11; ch++) {
-        
-        // 1. Force the radio to the new channel
         wifi_set_channel(ch);
-        
-        // 2. Update the peer info to this channel
-        // broadcastAddress is the 0xFF... address from your config
         esp_now_set_peer_channel(broadcastAddress, ch);
         
-        // 3. Send the packet
-        // We only send ONCE per channel because the channel hop 
-        // acts as its own form of redundancy.
-        esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+        // Instead of 1 packet, send 5 packets on EVERY channel
+        // This ensures that when we hit the RIGHT channel, 
+        // we stay there long enough for a busy Host to hear us.
+        for (int i = 0; i < 5; i++) {
+            esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+            delay(1); // Rapid fire
+        }
         
-        // 4. Critical: Short delay to allow the radio to finish the TX 
-        // and for the PLL to stabilize on the next frequency.
-        delay(4); 
+        // Small pause to let the radio settle before hopping to the next frequency
+        delay(2); 
     }
-    
-    Serial.println("[✓] Sweep complete.");
+    Serial.println("[✓] Heavy Sweep complete.");
 }
 
 void setup() {

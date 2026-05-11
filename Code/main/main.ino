@@ -44,7 +44,7 @@ int currentState = CONNECTING;
 
 // main.ino Globals
 CRGB digitColor = CRGB::Red; // Default
-uint8_t systemBrightness = 255;
+uint8_t systemBrightness = 127;
 
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   memcpy(&incoming, data, sizeof(incoming));
@@ -397,7 +397,7 @@ void loadSavedSettings() {
     readyRequired = preferences.getBool("readyRequired", false); 
     timeSelState = preferences.getBool("timeSelState", false); 
 
-    systemBrightness = preferences.getUChar("brightness", 230);
+    systemBrightness = preferences.getUChar("brightness", 127);
     systemBrightness = constrain(systemBrightness, 10, 230); // Guard against old saved data
     FastLED.setBrightness(systemBrightness);
 
