@@ -26,6 +26,34 @@ bool blinkState = true;
 unsigned long lastBlinkTime = 0;
 const unsigned long blinkInterval = 500; // Blink every 500ms
 
+void handleConnectingAnimation() {
+
+  static uint8_t head = 0;
+  static unsigned long lastAnimTime = 0;
+  const uint8_t animSpeed = 30; // Milliseconds per frame
+  const uint8_t tailLength = 15;
+
+  if (millis() - lastAnimTime >= animSpeed) {
+      lastAnimTime = millis();
+
+    // Clear the border
+    for (int i = 0; i < BORDER_LED_COUNT; i++) {
+        setBorderLEDs(i, CRGB::Black);
+    }
+
+    // Draw the "snake"
+    for (int i = 0; i < tailLength; i++) {
+        int pos = (head - i + BORDER_LED_COUNT) % BORDER_LED_COUNT;
+        // Fade the tail
+        uint8_t brightness = map(i, 0, tailLength, 255, 0);
+        setBorderLEDs(pos, ORANGE.fadeToBlackBy(255 - brightness)); // Cyan snake
+    }
+
+      head = (head + 1) % BORDER_LED_COUNT;
+      needsLEDUpdate = true;
+  }
+}
+
 void checkButtons() {
   unsigned long currentMillis = millis();
 
@@ -184,9 +212,15 @@ void transitionToMatch() {
 
 void processCommand(String cmd) {
     if (cmd == "start" && (currentState != FINISHED || currentState != CLOCK_MODE)) {
-        currentState = PRE_COUNTDOWN_INIT;
-        blinkState = true;
-    } 
+
+    if (readyRequired && (!redReady || !blueReady)) {
+          Serial.println("[LOCKOUT] Start denied: Drivers not ready.");
+          // Optional: Add a brief orange blink here to show why it failed
+          return; 
+      }
+    currentState = PRE_COUNTDOWN_INIT;
+    blinkState = true;
+  } 
     else if (cmd == "pause" && (currentState != FINISHED || currentState != IDLE)) {
         currentState = PAUSED;
     } 
@@ -202,9 +236,16 @@ void processCommand(String cmd) {
         updateLEDs();
         FastLED.show();
     } 
-    else if (cmd == "switch" && currentState != RUNNING) {
+    else if (cmd == "switch" && currentState != RUNNING && currentState != PAUSED) {
         countdown_time = (countdown_time == 120) ? 180 : 120;
         current_time = countdown_time;
+
+        bool newTimeSelState = (countdown_time == 180);
+
+        preferences.begin("settings", false);
+        preferences.putBool("timeSelState", newTimeSelState);
+        preferences.end();
+
         updateClient();
         updateLEDs();
     }

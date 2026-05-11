@@ -127,12 +127,28 @@ void initNetwork() {
       String json = "{";
       json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
       json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
-      // This tells the browser to gray out buttons
-      json += "\"state\":\"" + String(currentState == CLOCK_MODE ? "CLOCK_MODE" : "TIMER") + "\","; 
+      
+      // Explicitly send every possible state
+      json += "\"state\":\"";
+      if (currentState == CLOCK_MODE) json += "CLOCK_MODE";
+      else if (currentState == RUNNING) json += "RUNNING";
+      else if (currentState == PAUSED) json += "PAUSED";
+      else if (currentState == PRE_COUNTDOWN_LOOP) json += "PRE_COUNTDOWN_LOOP";
+      else if (currentState == FINISHED) json += "FINISHED";
+      else json += "IDLE";
+      json += "\",";
+
       json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
       json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
-      json += "\"judge\":" + String(judgePaired ? "true" : "false");
-      json += "}";
+      json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
+      
+      int minutes = current_time / 60;
+      int seconds = current_time % 60;
+      char timeBuf[6];
+      snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", minutes, seconds);
+      json += "\"currentTime\":\"" + String(timeBuf) + "\"";
+      json += "}"; 
+      
       server.send(200, "application/json", json);
     });
 
@@ -204,6 +220,12 @@ void handleControl() {
 
 // INSERT NEW FUNCTION HERE:
 void handleSetTime() {
+
+  if (currentState == RUNNING || currentState == PRE_COUNTDOWN_LOOP) {
+        server.send(403, "text/plain", "Cannot set time while match is active!");
+        return;
+    }
+
     int m = server.arg("m").toInt();
     int s = server.arg("s").toInt();
     
@@ -272,12 +294,18 @@ void checkWiFiConnection() {
         webSocket.onEvent(onWebSocketEvent);
         
         currentState = IDLE;
-        updateLEDs();
+        setBorder();
+        needsLEDUpdate = true;
+        updateClient();
     } 
     // If it takes longer than 30 seconds, fail over to AP
     else if (millis() - startAttemptTime > 30000) {
         startAPMode();
+
         currentState = IDLE;
+        setBorder();
+        needsLEDUpdate = true;
+        updateClient();
     }
 }
 
@@ -370,7 +398,9 @@ void setup() {
           switch(currentState)
           {
             case CONNECTING:
+              handleConnectingAnimation();
               checkWiFiConnection();
+              
             break;
 
             case PRE_COUNTDOWN_INIT:

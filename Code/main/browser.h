@@ -16,11 +16,13 @@ const char* html = R"rawliteral(
             .flex-row { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
             .status { margin: 15px auto; font-size: 16px; border: 1px solid #444; padding: 10px; border-radius: 8px; max-width: 400px; }
             #pairingBanner { display: none; background: #0000ff; padding: 15px; margin: 10px; font-weight: bold; border-radius: 5px; }
-            input[type="number"] { padding: 8px; width: 50px; text-align: center; }
+            input[type="number"], input[type="text"] { padding: 8px; width: 50px; text-align: center; border-radius: 4px; border: 1px solid #444; }
+            input[name="ssid"], input[name="pass"] { width: 150px; text-align: left; }
             label { font-size: 16px; margin: 10px; display: block; }
             
+            /* Visual lockout styles */
             .disabled-ui { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
-            .blocked-feature { opacity: 0.4; pointer-events: none; }
+            .blocked-feature { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
         </style>
     </head>
     <body>
@@ -29,17 +31,17 @@ const char* html = R"rawliteral(
         <p id="countdown">02:00</p>
         
         <div id="timerControls">
-            <div style="margin-bottom: 20px;">
+            <div id="manualTimeSection" style="margin-bottom: 20px;">
                 <input type="number" id="manualMin" placeholder="MM"> :
                 <input type="number" id="manualSec" placeholder="SS">
-                <button class="small-btn" onclick="applyTime()" style="background:green; color:white;">Set Time</button>
+                <button id="setTimeBtn" class="small-btn" onclick="applyTime()" style="background:green; color:white;">Set Time</button>
             </div>
             
             <div>
-                <button onclick="controlTimer('start')" style="background:green; color:white;">Start</button>
-                <button onclick="controlTimer('pause')" style="background:orange;">Pause</button>
-                <button onclick="controlTimer('reset')" style="background:gray; color:white;">Reset</button>
-                <button onclick="toggleTime()" style="background:blue; color:white;">Switch 2/3m</button>
+                <button id="startBtn" onclick="controlTimer('start')" style="background:green; color:white;">Start</button>
+                <button id="pauseBtn" onclick="controlTimer('pause')" style="background:orange;">Pause</button>
+                <button id="resetBtn" onclick="controlTimer('reset')" style="background:gray; color:white;">Reset</button>
+                <button id="switchBtn" onclick="toggleTime()" style="background:blue; color:white;">Switch 2/3m</button>
             </div>
         </div>
 
@@ -51,28 +53,28 @@ const char* html = R"rawliteral(
             Blue: <span id="blueStat" style="color:red;">OPEN</span> | 
             Judge: <span id="judgeStat" style="color:red;">OPEN</span>
             
-            <div class="flex-row" style="margin-top:10px;">
-                <button class="small-btn" onclick="startPairing()" style="background:orange;">Pair Remotes</button>
-                <button class="small-btn" onclick="wipeRemotes()" style="background:red; color:white;">Wipe All</button>
+            <div id="pairingControls" class="flex-row" style="margin-top:10px;">
+                <button id="pairBtn" class="small-btn" onclick="startPairing()" style="background:orange;">Pair Remotes</button>
+                <button id="wipeBtn" class="small-btn" onclick="wipeRemotes()" style="background:red; color:white;">Wipe All</button>
             </div>
             
-            <div>
+            <div id="readySection">
                 <input type="checkbox" id="readyToggle" onchange="toggleReady()"> 
                 <label for="readyToggle" style="display:inline;">Require Driver Ready</label>
             </div>
 
-            <div id="clockContainer" style="margin-top: 10px;">
+            <div id="clockSection" style="margin-top: 10px;">
                 <input type="checkbox" id="clockToggle" onchange="toggleClockMode()"> 
                 <label for="clockToggle" style="display:inline;">Enable Clock Mode</label>
             </div>
         </div>
 
-        <div class="status">
+        <div id="wifiSection" class="status">
             <h3>WiFi Settings</h3>
             <form action="/setwifi" method="POST">
-                <input name="ssid" placeholder="SSID" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
-                <input name="pass" type="text" placeholder="Password" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
-                <button type="submit" class="small-btn" style="background:gray; color:white;">Save & Reboot</button>
+                <input id="wifiSSID" name="ssid" placeholder="SSID" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
+                <input id="wifiPass" name="pass" type="text" placeholder="Password" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
+                <button id="wifiBtn" type="submit" class="small-btn" style="background:gray; color:white;">Save & Reboot</button>
             </form>
         </div>
 
@@ -134,27 +136,75 @@ const char* html = R"rawliteral(
                     .then(r => r.json())
                     .then(data => {
                         lastKnownState = data.state;
+                        
+                        // Sync countdown text if not in active match
+                        if (data.state !== "RUNNING" && data.state !== "PRE_COUNTDOWN_LOOP" && data.currentTime) {
+                            document.getElementById('countdown').textContent = data.currentTime;
+                        }
+
                         document.getElementById('pairingBanner').style.display = data.pairing ? 'block' : 'none';
                         updateStatus('redStat', data.red); 
                         updateStatus('blueStat', data.blue); 
                         updateStatus('judgeStat', data.judge);
                         document.getElementById('readyToggle').checked = data.readyRequired;
                         
-                        const timerActive = (data.state === "RUNNING" || data.state === "PAUSED" || data.state.includes("PRE_COUNTDOWN"));
-                        const clockContainer = document.getElementById('clockContainer');
-                        const clockToggle = document.getElementById('clockToggle');
+                        // 1. DEFINE STATES
+                        const isRunning = (data.state === "RUNNING" || data.state.includes("PRE_COUNTDOWN"));
+                        const isPaused = (data.state === "PAUSED");
+                        const isIdle = (data.state === "IDLE" || data.state === "FINISHED" || data.state === "CLOCK_MODE");
 
-                        if (timerActive) {
-                            clockContainer.classList.add('blocked-feature');
-                            clockToggle.disabled = true;
+                        // 2. MAIN TIMER BUTTONS (Start, Pause, Reset)
+                        const startBtn = document.getElementById('startBtn');
+                        const pauseBtn = document.getElementById('pauseBtn');
+                        const resetBtn = document.getElementById('resetBtn');
+
+                        if (isRunning) { resetBtn.classList.add('blocked-feature'); resetBtn.disabled = true; }
+                        else { resetBtn.classList.remove('blocked-feature'); resetBtn.disabled = false; }
+
+                        if (!isRunning) { pauseBtn.classList.add('blocked-feature'); pauseBtn.disabled = true; }
+                        else { pauseBtn.classList.remove('blocked-feature'); pauseBtn.disabled = false; }
+
+                        if (isRunning) { startBtn.classList.add('blocked-feature'); startBtn.disabled = true; }
+                        else { startBtn.classList.remove('blocked-feature'); startBtn.disabled = false; }
+
+                        // 3. TIME SETTINGS (Lock everything, including switch, during RUNNING)
+                        const timeSection = document.getElementById('manualTimeSection');
+                        const switchBtn = document.getElementById('switchBtn');
+                        const timeInputs = ['manualMin', 'manualSec', 'setTimeBtn', 'switchBtn'];
+
+                        if (isRunning) {
+                            timeSection.classList.add('blocked-feature');
+                            switchBtn.classList.add('blocked-feature');
+                            timeInputs.forEach(id => {
+                                document.getElementById(id).disabled = true;
+                            });
                         } else {
-                            clockContainer.classList.remove('blocked-feature');
-                            clockToggle.disabled = false;
+                            timeSection.classList.remove('blocked-feature');
+                            switchBtn.classList.remove('blocked-feature');
+                            timeInputs.forEach(id => {
+                                document.getElementById(id).disabled = false;
+                            });
                         }
+
+                        // 4. SYSTEM SETTINGS (Locked if NOT IDLE - covers RUNNING and PAUSED)
+                        const systemGroups = ['pairingControls', 'wifiSection', 'clockSection', 'readySection'];
+                        const systemInputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle'];
+                        
+                        const shouldLockSystem = !isIdle;
+
+                        systemGroups.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (shouldLockSystem) el.classList.add('blocked-feature');
+                            else el.classList.remove('blocked-feature');
+                        });
+
+                        systemInputs.forEach(id => {
+                            document.getElementById(id).disabled = shouldLockSystem;
+                        });
 
                         if (!isLockingUI) {
                             const isClockMode = (data.state === "CLOCK_MODE");
-                            clockToggle.checked = isClockMode;
+                            document.getElementById('clockToggle').checked = isClockMode;
                             updateControls(isClockMode);
                         }
                     })

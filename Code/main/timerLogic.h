@@ -12,6 +12,7 @@ void updateTimer();
 void transitionToMatch();
 void handlePausedBlink();
 void handleClockMode();
+void handleConnectingAnimation();
 
 // General logic
 void processCommand(String cmd);
