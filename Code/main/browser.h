@@ -23,6 +23,9 @@ const char* html = R"rawliteral(
             /* Visual lockout styles */
             .disabled-ui { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
             .blocked-feature { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
+            
+            input[type="range"] { width: 80%; margin-top: 10px; }
+            input[type="color"] { vertical-align: middle; cursor: pointer; }
         </style>
     </head>
     <body>
@@ -69,6 +72,17 @@ const char* html = R"rawliteral(
             </div>
         </div>
 
+        <div id="displaySection" class="status">
+            <h3>Display Settings</h3>
+            <div>
+                <label>Digit Color: <input type="color" id="colorPicker" onchange="applyColor()" value="#ff0000"></label>
+            </div>
+            <div style="margin-top:15px;">
+                <label>Brightness: <br>
+                <input type="range" id="brightSlider" min="10" max="230" onchange="applyBrightness()" value="230"></label>
+            </div>
+        </div>
+
         <div id="wifiSection" class="status">
             <h3>WiFi Settings</h3>
             <form action="/setwifi" method="POST">
@@ -86,6 +100,16 @@ const char* html = R"rawliteral(
             webSocket.onmessage = function(event) {
                 document.getElementById('countdown').textContent = event.data;
             };
+
+            function applyColor() {
+                const hex = document.getElementById('colorPicker').value.replace('#', '');
+                fetch(`/setcolor?hex=${hex}`);
+            }
+
+            function applyBrightness() {
+                const val = document.getElementById('brightSlider').value;
+                fetch(`/setbrightness?val=${val}`);
+            }
 
             function toggleClockMode() {
                 const clockToggle = document.getElementById('clockToggle');
@@ -137,7 +161,6 @@ const char* html = R"rawliteral(
                     .then(data => {
                         lastKnownState = data.state;
                         
-                        // Sync countdown text if not in active match
                         if (data.state !== "RUNNING" && data.state !== "PRE_COUNTDOWN_LOOP" && data.currentTime) {
                             document.getElementById('countdown').textContent = data.currentTime;
                         }
@@ -148,12 +171,11 @@ const char* html = R"rawliteral(
                         updateStatus('judgeStat', data.judge);
                         document.getElementById('readyToggle').checked = data.readyRequired;
                         
-                        // 1. DEFINE STATES
                         const isRunning = (data.state === "RUNNING" || data.state.includes("PRE_COUNTDOWN"));
                         const isPaused = (data.state === "PAUSED");
                         const isIdle = (data.state === "IDLE" || data.state === "FINISHED" || data.state === "CLOCK_MODE");
 
-                        // 2. MAIN TIMER BUTTONS (Start, Pause, Reset)
+                        // 1. TIMER BUTTON VISUALS
                         const startBtn = document.getElementById('startBtn');
                         const pauseBtn = document.getElementById('pauseBtn');
                         const resetBtn = document.getElementById('resetBtn');
@@ -167,7 +189,7 @@ const char* html = R"rawliteral(
                         if (isRunning) { startBtn.classList.add('blocked-feature'); startBtn.disabled = true; }
                         else { startBtn.classList.remove('blocked-feature'); startBtn.disabled = false; }
 
-                        // 3. TIME SETTINGS (Lock everything, including switch, during RUNNING)
+                        // 2. TIME SETTINGS (Editable during PAUSED)
                         const timeSection = document.getElementById('manualTimeSection');
                         const switchBtn = document.getElementById('switchBtn');
                         const timeInputs = ['manualMin', 'manualSec', 'setTimeBtn', 'switchBtn'];
@@ -175,20 +197,17 @@ const char* html = R"rawliteral(
                         if (isRunning) {
                             timeSection.classList.add('blocked-feature');
                             switchBtn.classList.add('blocked-feature');
-                            timeInputs.forEach(id => {
-                                document.getElementById(id).disabled = true;
-                            });
+                            timeInputs.forEach(id => document.getElementById(id).disabled = true);
                         } else {
                             timeSection.classList.remove('blocked-feature');
                             switchBtn.classList.remove('blocked-feature');
-                            timeInputs.forEach(id => {
-                                document.getElementById(id).disabled = false;
-                            });
+                            timeInputs.forEach(id => document.getElementById(id).disabled = false);
                         }
 
-                        // 4. SYSTEM SETTINGS (Locked if NOT IDLE - covers RUNNING and PAUSED)
-                        const systemGroups = ['pairingControls', 'wifiSection', 'clockSection', 'readySection'];
-                        const systemInputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle'];
+                        // 3. SYSTEM SETTINGS (Locked for RUNNING + PAUSED)
+                        // Includes Display Section
+                        const systemGroups = ['pairingControls', 'wifiSection', 'clockSection', 'readySection', 'displaySection'];
+                        const systemInputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'colorPicker', 'brightSlider'];
                         
                         const shouldLockSystem = !isIdle;
 
@@ -199,7 +218,8 @@ const char* html = R"rawliteral(
                         });
 
                         systemInputs.forEach(id => {
-                            document.getElementById(id).disabled = shouldLockSystem;
+                            const el = document.getElementById(id);
+                            if (el) el.disabled = shouldLockSystem;
                         });
 
                         if (!isLockingUI) {

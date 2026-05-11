@@ -42,6 +42,10 @@ unsigned long startAttemptTime = 0;
 
 int currentState = CONNECTING;
 
+// main.ino Globals
+CRGB digitColor = CRGB::Red; // Default
+uint8_t systemBrightness = 255;
+
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   memcpy(&incoming, data, sizeof(incoming));
   uint8_t* mac = info->src_addr;
@@ -150,6 +154,45 @@ void initNetwork() {
       json += "}"; 
       
       server.send(200, "application/json", json);
+    });
+
+
+    server.on("/setcolor", []() {
+      if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
+          server.send(403, "text/plain", "Locked during match");
+          return;
+      }
+
+      String hexStr = server.arg("hex");
+      // Convert the hex string from the browser (e.g., "ff0000") to a number
+      uint32_t hex = strtol(hexStr.c_str(), NULL, 16);
+      digitColor = CRGB(hex);
+      
+      // Save to Flash Memory
+      preferences.begin("settings", false);
+      preferences.putUInt("digitColor", hex);
+      preferences.end();
+      
+      updateLEDs(); // Redraw digits with the new color
+      server.send(200, "text/plain", "Color Saved");
+  });
+
+    server.on("/setbrightness", []() {
+      if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
+          server.send(403, "text/plain", "Locked during match");
+          return;
+      }
+      int requestedVal = server.arg("val").toInt();
+      systemBrightness = constrain(requestedVal, 10, 230);
+
+      preferences.begin("settings", false);
+      preferences.putUChar("brightness", systemBrightness);
+      preferences.end();
+
+      FastLED.setBrightness(systemBrightness);
+      needsLEDUpdate = true;
+
+      server.send(200, "text/plain", "Brightness Set");
     });
 
     server.on("/synctime", []() {
@@ -353,6 +396,14 @@ void loadSavedSettings() {
     preferences.begin("settings", true);  // read-only
     readyRequired = preferences.getBool("readyRequired", false); 
     timeSelState = preferences.getBool("timeSelState", false); 
+
+    systemBrightness = preferences.getUChar("brightness", 230);
+    systemBrightness = constrain(systemBrightness, 10, 230); // Guard against old saved data
+    FastLED.setBrightness(systemBrightness);
+
+    uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000);
+    digitColor = CRGB(savedColor);
+
     preferences.end();
 
     countdown_time = timeSelState ? 180 : 120;

@@ -30,6 +30,10 @@
 #define HALF_BORDER (BORDER_LED_COUNT / 2)
 #define PHYSICAL_STRIP_LEN (HALF_DIGIT + HALF_BORDER)
 
+// Add to Config.h
+extern CRGB digitColor;
+extern uint8_t systemBrightness;
+
 // Global Objects
 extern Preferences preferences;
 

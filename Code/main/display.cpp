@@ -9,7 +9,6 @@ CRGB border_physical[PHYSICAL_STRIP_LEN];
 void initDisplay() {
     FastLED.addLeds<NEOPIXEL, DIGIT_PIN>(digit_physical, PHYSICAL_STRIP_LEN);
     FastLED.addLeds<NEOPIXEL, BORDER_PIN>(border_physical, PHYSICAL_STRIP_LEN);
-    FastLED.setBrightness(255);
 }
 
 void setDigit(int digit, int offset, bool inverted) {
@@ -25,22 +24,18 @@ void setDigit(int digit, int offset, bool inverted) {
         int segmentIndex = inverted ? invertedMap[i] : i;
         int ledIndex = offset + segmentIndex * 7;
         for (int j = 0; j < 7; j++) {
-            if (digitMap[digit][i]) {
-                setDigitLEDs(ledIndex + j, CRGB::Red);
-            } else {
-                setDigitLEDs(ledIndex + j, CRGB::Black);
-            }
+            // Replace CRGB::Red with digitColor
+            setDigitLEDs(ledIndex + j, digitMap[digit][i] ? digitColor : CRGB::Black);
         }
     }
 }
 
 void setColon() {
     for (int i = 0; i < 3; i++) {
-        setDigitLEDs(98 + i, CRGB::Red);
-        setDigitLEDs(199 + i, CRGB::Red);
+        setDigitLEDs(98 + i, digitColor);
+        setDigitLEDs(199 + i, digitColor);
     }
 }
-
 void updateLEDs() {
     int minutes = current_time / 60;
     int seconds = current_time % 60;
