@@ -21,6 +21,7 @@ unsigned long lastDebounceTimeTimeSel = 0;
 unsigned long lastDebounceTimeBlue = 0;
 unsigned long lastDebounceTimeRed = 0;
 
+
 bool blinkState = true;
 unsigned long lastBlinkTime = 0;
 const unsigned long blinkInterval = 500; // Blink every 500ms
@@ -182,14 +183,15 @@ void transitionToMatch() {
 }
 
 void processCommand(String cmd) {
-    if (cmd == "start" && currentState != FINISHED) {
+    if (cmd == "start" && (currentState != FINISHED || currentState != CLOCK_MODE)) {
         currentState = PRE_COUNTDOWN_INIT;
         blinkState = true;
     } 
-    else if (cmd == "pause" && currentState != FINISHED) {
+    else if (cmd == "pause" && (currentState != FINISHED || currentState != IDLE)) {
         currentState = PAUSED;
     } 
-    else if (cmd == "reset" && (currentState == FINISHED || currentState == PAUSED)) {
+    else if (cmd == "reset" && (currentState == FINISHED ||
+            currentState == PAUSED || currentState == CLOCK_MODE)) {
         blueReady = redReady = false;
         currentState = IDLE;
         current_time = countdown_time;
@@ -221,4 +223,30 @@ void setTeamReady(String team) {
         }
     }
     needsLEDUpdate = true;
+}
+
+void handleClockMode() {
+    static unsigned long lastClockUpdate = 0;
+    // Only refresh the display once per second to save resources
+    if (millis() - lastClockUpdate < 1000) return;
+    lastClockUpdate = millis();
+
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) return; // Pulls from the seeded system clock
+
+    int hour = timeinfo.tm_hour;
+    int minute = timeinfo.tm_min;
+
+    // Convert 24h to 12h format for display
+    if (hour == 0) hour = 12;
+    if (hour > 12) hour -= 12;
+
+    // Use your existing display functions
+    setDigit(hour / 10, 0, false);
+    setDigit(hour % 10, 49, false);
+    setColon();
+    setDigit(minute / 10, 150, true);
+    setDigit(minute % 10, 101, true);
+    
+    needsLEDUpdate = true; // Signal main.ino to call FastLED.show()
 }

@@ -54,11 +54,13 @@ void updateLEDs() {
 }
 
 void setBorder() {
-    if(readyRequired) {
-        for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB(127,127,127));
+    if(!readyRequired || (redReady && blueReady)) {
+        for (int i = 0; i < BORDER_LED_COUNT/2; i++) 
+          setBorderLEDs(i, CRGB::Blue);
+        for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT ; i++) 
+          setBorderLEDs(i, CRGB::Red);
     } else {
-        for (int i = 0; i < BORDER_LED_COUNT/2; i++) setBorderLEDs(i, CRGB::Blue);
-        for (int i = BORDER_LED_COUNT/2; i < BORDER_LED_COUNT ; i++) setBorderLEDs(i, CRGB::Red);
+        for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB(127,127,127));
     }
     needsLEDUpdate = true;
 }

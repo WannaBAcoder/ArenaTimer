@@ -11,6 +11,7 @@ void handlePreCountdownAnimation();
 void updateTimer();
 void transitionToMatch();
 void handlePausedBlink();
+void handleClockMode();
 
 // General logic
 void processCommand(String cmd);

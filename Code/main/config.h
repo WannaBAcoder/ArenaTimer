@@ -30,12 +30,6 @@
 #define HALF_BORDER (BORDER_LED_COUNT / 2)
 #define PHYSICAL_STRIP_LEN (HALF_DIGIT + HALF_BORDER)
 
-// NTP Settings
-const char* ntpServer = "pool.ntp.org";
-// Example for US Central Time: "CST6CDT,M3.2.0,M11.1.0"
-// You can change this string based on your local timezone
-const char* timezoneConfig = "CST6CDT,M3.2.0,M11.1.0";
-
 // Global Objects
 extern Preferences preferences;
 

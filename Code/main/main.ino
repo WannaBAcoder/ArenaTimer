@@ -30,7 +30,6 @@ uint8_t redMAC[6], blueMAC[6], judgeMAC[6];
 bool redPaired = false, bluePaired = false, judgePaired = false;
 struct_message incoming;
 
-
 unsigned long lastCountdownTime = 0;
 
 int countdown = 3; //number of seconds until match start
@@ -38,6 +37,8 @@ int countdown = 3; //number of seconds until match start
 int scrollIndex = 0;
 unsigned long lastScrollTime = 0;
 volatile bool needsLEDUpdate = false;
+
+unsigned long startAttemptTime = 0;
 
 int currentState = CONNECTING;
 
@@ -122,16 +123,44 @@ void initNetwork() {
         server.send(200, "text/plain", "Remotes Wiped");
     });
 
-    // 4. System Status (Fixed JSON formatting)
     server.on("/status", []() {
-        String json = "{";
-        json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
-        json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
-        json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
-        json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
-        json += "\"readyRequired\":" + String(readyRequired ? "true" : "false"); // No trailing comma
-        json += "}";
-        server.send(200, "application/json", json);
+      String json = "{";
+      json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
+      json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
+      // This tells the browser to gray out buttons
+      json += "\"state\":\"" + String(currentState == CLOCK_MODE ? "CLOCK_MODE" : "TIMER") + "\","; 
+      json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
+      json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
+      json += "\"judge\":" + String(judgePaired ? "true" : "false");
+      json += "}";
+      server.send(200, "application/json", json);
+    });
+
+    server.on("/synctime", []() {
+      // Safety check: Only allow clock mode if we are IDLE or already in CLOCK_MODE
+      if (currentState != IDLE && currentState != CLOCK_MODE) {
+          server.send(403, "text/plain", "Timer is active!");
+          return;
+      }
+
+      int h = server.arg("h").toInt();
+      int m = server.arg("m").toInt();
+      int s = server.arg("s").toInt();
+
+      struct tm tm;
+      tm.tm_hour = h;
+      tm.tm_min = m;
+      tm.tm_sec = s;
+      tm.tm_year = 2026 - 1900; 
+      tm.tm_mon = 4;            
+      tm.tm_mday = 10;          
+
+      time_t t = mktime(&tm);
+      struct timeval now = { .tv_sec = t };
+      settimeofday(&now, NULL); //
+      
+      currentState = CLOCK_MODE;
+      server.send(200, "text/plain", "Clock Seeded");
     });
 
     // 5. Start Communication Services
@@ -204,7 +233,6 @@ void handleSetWiFi() {
     String pass = server.arg("pass");
     
     if (ssid.length() > 0 && pass.length() > 0) {
-        ssid = ssid;
         preferences.begin("wifi", false);
         preferences.putString("ssid", ssid);
         preferences.putString("pass", pass);
@@ -214,65 +242,46 @@ void handleSetWiFi() {
         delay(3000);
         ESP.restart();
     } else {
-        server.send(200, "text/html", "<h1>Invalid Input</h1>");
+        server.send(200, "text/html", "<h1>Invalid Input - Both SSID and Password are required</h1>");
     }
 }
 
 void connectWiFi() {
     preferences.begin("wifi", true);
-    String ssid = preferences.getString("ssid", "Disconnected");
+    String ssid = preferences.getString("ssid", "");
     String pass = preferences.getString("pass", "");
     preferences.end();
     
-    if (ssid.length() == 0) {
-        Serial.println("No WiFi credentials stored, starting AP mode...");
+    if (ssid.length() == 0 || ssid == "Disconnected") {
         startAPMode();
         return;
     }
     
-    Serial.print("Connecting to WiFi: ");
-    Serial.println(ssid);
     WiFi.begin(ssid.c_str(), pass.c_str());
-    
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 30000) {
-        Serial.print(".");
+    startAttemptTime = millis(); // Make sure this is a global variable
+    currentState = CONNECTING;   // Trigger the animation task
+}
 
-        if(border_toggle)
-        {
-          //turn off LEDs
-          for (int i = 0; i < BORDER_LED_COUNT; i++) {
-            setBorderLEDs(i, CRGB::Black);  // Turn off all LEDs
-          }
-          FastLED.show();  // Update LEDs
-        }
-        else
-          setBorder();
-        border_toggle = !border_toggle;
-
-        delay(500);
-    }
-
+void checkWiFiConnection() {
+    // If connected, set up the server and stop animating
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("Connected to WiFi!");
-        Serial.print("IP Address: ");
-        Serial.println(WiFi.localIP());
-
         server.on("/", handleRoot);
         server.on("/control", handleControl);
         server.begin();
-
         webSocket.begin();
         webSocket.onEvent(onWebSocketEvent);
-
-        setBorder();
-    } else {
-        Serial.println("Failed to connect, starting AP mode...");
+        
+        currentState = IDLE;
+        updateLEDs();
+    } 
+    // If it takes longer than 30 seconds, fail over to AP
+    else if (millis() - startAttemptTime > 30000) {
         startAPMode();
+        currentState = IDLE;
     }
-
-    currentState = IDLE;
 }
+
+
 
 void clearRemotes() {
     Serial.println("[SYSTEM] Wiping remote bindings...");
@@ -360,7 +369,8 @@ void setup() {
 
           switch(currentState)
           {
-            case IDLE:
+            case CONNECTING:
+              checkWiFiConnection();
             break;
 
             case PRE_COUNTDOWN_INIT:
@@ -383,6 +393,7 @@ void setup() {
             break;
 
             case CLOCK_MODE:
+              handleClockMode();
             break;
           
           }
