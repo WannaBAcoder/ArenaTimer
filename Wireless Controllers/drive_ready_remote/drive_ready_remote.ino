@@ -2,10 +2,7 @@
 #include <espnow.h>
 
 // --- CONFIGURATION ---
-const char* DEV_TYPE = "RedReady"; 
-// Note: We don't need BUTTON_PIN anymore because the Reset button is hardware-level
-// ---------------------
-
+const char* DEV_TYPE = "BlueReady"; 
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 typedef struct struct_message {
@@ -16,42 +13,53 @@ typedef struct struct_message {
 struct_message myData;
 
 void setup() {
-  Serial.begin(115200);
-  
-  // Initialize WiFi
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect(); 
+    // Start serial quickly for debugging
+    Serial.begin(115200);
+    Serial.println("\n[!] Wake detected. Initializing Shotgun Blast...");
+    
+    // 1. WiFi Prep
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect(); 
 
-  if (esp_now_init() != 0) {
-    return;
-  }
+    if (esp_now_init() != 0) {
+        Serial.println("ESP-NOW Init Failed");
+        ESP.deepSleep(0); // Sleep and try again next press
+        return;
+    }
 
-  // Use the exact syntax from your working code
-  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+    esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+    
+    // Add the peer initially on Channel 1 (we will update this in the loop)
+    esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
 
-  // Prepare the data packet
-  strcpy(myData.deviceType, DEV_TYPE);
-  myData.buttonID = 1;
+    // 2. Prepare the data packet
+    strcpy(myData.deviceType, DEV_TYPE);
+    myData.buttonID = 1;
 
-  Serial.println("[!] Reset Triggered. Blasting packets...");
+    for (int ch = 1; ch <= 11; ch++) {
+        wifi_set_channel(ch);
+        esp_now_set_peer_channel(broadcastAddress, ch);
+        
+        // Small internal loop for extra insurance on each channel
+        for(int extra = 0; extra < 3; extra++) {
+            esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+            delay(2); // very short gap
+        }
+        
+        Serial.printf("Blasted Channel %d (3x)\n", ch);
+    }
 
-  // The "Blast" Loop
-  for(int i = 0; i < 10; i++) {
-    esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
-    delay(5); 
-  }
-
-  // Brief delay to ensure radio buffer clears
-  delay(100);
-
-  // Deep sleep forever. 
-  // Power draw drops to ~20uA. 
-  // It only wakes up when the RST button is pressed.
-  Serial.println("Mission complete. Going to sleep.");
-  ESP.deepSleep(0); 
+    // 4. Mission Complete
+    Serial.println("Sweep complete. Entering Deep Sleep (Infinite).");
+    
+    // Give the last packet a tiny bit of time to leave the buffer 
+    // before we yank the power from the radio.
+    delay(50);
+    
+    // Deep sleep (0) means sleep until the RST pin is pulled LOW
+    ESP.deepSleep(0); 
 }
 
 void loop() {
-  // Unreachable
+    // Unused in Deep Sleep workflow
 }
