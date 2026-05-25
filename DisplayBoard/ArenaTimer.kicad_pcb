@@ -73130,7 +73130,7 @@
 		)
 	)
 	(gr_text "GND"
-		(at 230.5 50 -0)
+		(at 230.65 49.95 -0)
 		(layer "B.SilkS")
 		(uuid "cace9bf6-595f-423d-aba7-32a7c843d2cb")
 		(effects
@@ -73142,9 +73142,33 @@
 		)
 	)
 	(gr_text "+5V"
-		(at 230.5 61 -0)
+		(at 230.9 61.675 -0)
 		(layer "B.SilkS")
 		(uuid "4b6c9f91-aaea-4d07-b172-defe1dc27c3d")
+		(effects
+			(font
+				(size 2.5 2.5)
+				(thickness 0.4)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "BIN"
+		(at 240.9 72.525 -0)
+		(layer "B.SilkS")
+		(uuid "4261e3ab-f4c8-470e-9c3b-7d3d4a94ae6c")
+		(effects
+			(font
+				(size 2.5 2.5)
+				(thickness 0.4)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "DIN"
+		(at 241.225 84.275 -0)
+		(layer "B.SilkS")
+		(uuid "e5877fc5-89ff-47ed-b7ee-f09c5da66d80")
 		(effects
 			(font
 				(size 2.5 2.5)
@@ -73274,7 +73298,7 @@
 		)
 	)
 	(gr_text "Do not populate J2 on host side"
-		(at 272.1102 87.1474 0)
+		(at 277.65 90.6 0)
 		(layer "B.SilkS")
 		(uuid "eca30097-8c61-409b-b301-08b0ea461056")
 		(effects
