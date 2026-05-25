@@ -4525,7 +4525,7 @@
 	)
 	(text "IO IN"
 		(exclude_from_sim no)
-		(at 28.194 50.8 0)
+		(at 38.354 52.07 0)
 		(effects
 			(font
 				(size 3.81 3.81)
@@ -4677,6 +4677,17 @@
 			)
 		)
 		(uuid "d5ee077a-47f4-4cfe-90b9-16d32d2c7614")
+	)
+	(text "DOUT->BIN, BOUT->DIN in early HW, left this way \nintentionally for widewspread SW compatibility"
+		(exclude_from_sim no)
+		(at 151.13 57.404 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f6554796-21b5-40f7-b773-af614d754fdb")
 	)
 	(text "LED Display"
 		(exclude_from_sim no)
@@ -5264,6 +5275,16 @@
 	)
 	(wire
 		(pts
+			(xy 170.18 72.39) (xy 177.8 72.39)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3fa6764c-0a60-4e16-b273-008516cece00")
+	)
+	(wire
+		(pts
 			(xy 309.88 200.66) (xy 309.88 203.2)
 		)
 		(stroke
@@ -5351,16 +5372,6 @@
 			(type default)
 		)
 		(uuid "49960f73-c9cb-4cd3-96a0-e5591925b0e2")
-	)
-	(wire
-		(pts
-			(xy 170.18 72.39) (xy 176.53 72.39)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4bba62b9-3042-4340-823e-ddd10cc23b3a")
 	)
 	(wire
 		(pts
@@ -5511,16 +5522,6 @@
 			(type default)
 		)
 		(uuid "61704e74-e119-49bc-9cc9-984973c574a3")
-	)
-	(wire
-		(pts
-			(xy 170.18 74.93) (xy 176.53 74.93)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6360add0-4a98-4547-a530-88208ddee4a9")
 	)
 	(wire
 		(pts
@@ -6401,6 +6402,16 @@
 			(type default)
 		)
 		(uuid "e86fcc33-234c-4851-ae6e-5a30f8af0cc1")
+	)
+	(wire
+		(pts
+			(xy 170.18 74.93) (xy 177.8 74.93)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e8b4dda2-3b49-44a5-a26e-37c00c274fa7")
 	)
 	(wire
 		(pts
@@ -9540,7 +9551,8 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x02_Pin")
-		(at 181.61 74.93 180)
+		(at 182.88 72.39 0)
+		(mirror y)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -9550,7 +9562,7 @@
 		(dnp no)
 		(uuid "6a751967-4f72-4b0c-914d-ab1343cad092")
 		(property "Reference" "J3"
-			(at 182.372 74.422 0)
+			(at 183.642 72.898 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9561,7 +9573,7 @@
 			)
 		)
 		(property "Value" "Conn_01x02_Pin"
-			(at 182.88 74.9299 0)
+			(at 184.15 72.3901 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9573,7 +9585,7 @@
 			)
 		)
 		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Horizontal"
-			(at 181.61 74.93 0)
+			(at 182.88 72.39 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9584,7 +9596,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 181.61 74.93 0)
+			(at 182.88 72.39 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9595,7 +9607,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 181.61 74.93 0)
+			(at 182.88 72.39 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9606,7 +9618,7 @@
 			)
 		)
 		(property "LCSC" "C492410"
-			(at 181.61 74.93 0)
+			(at 182.88 72.39 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
