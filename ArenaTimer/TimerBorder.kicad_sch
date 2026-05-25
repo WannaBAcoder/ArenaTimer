@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20250114)
+	(version 20260306)
 	(generator "eeschema")
-	(generator_version "9.0")
+	(generator_version "10.0")
 	(uuid "542af8ea-13fc-4fda-872b-579879d79110")
 	(paper "B")
 	(lib_symbols)
@@ -82,11 +82,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "453ff1ab-eee9-4c79-a89b-608962414ab4")
 		(property "Sheetname" "TimerQuadrant"
 			(at 186.69 133.9084 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -96,6 +98,8 @@
 		)
 		(property "Sheetfile" "timerquadrant.kicad_sch"
 			(at 186.69 147.9046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -144,11 +148,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "6103a489-5647-4100-815d-166d5b47887d")
 		(property "Sheetname" "TimerQuadrant1"
 			(at 224.79 133.9084 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -158,6 +164,8 @@
 		)
 		(property "Sheetfile" "timerquadrant.kicad_sch"
 			(at 224.79 147.9046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)

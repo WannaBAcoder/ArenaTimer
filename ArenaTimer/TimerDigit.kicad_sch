@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20250114)
+	(version 20260306)
 	(generator "eeschema")
-	(generator_version "9.0")
+	(generator_version "10.0")
 	(uuid "a7d0cc39-e5f0-4ee6-9985-2d6be0f52958")
 	(paper "B")
 	(lib_symbols)
@@ -206,11 +206,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "49b3b2e8-eaca-4342-a9c1-4ee5e72d12fd")
 		(property "Sheetname" "TimerSegment6"
 			(at 320.04 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -220,6 +222,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 320.04 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -271,11 +275,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "55ba9e3e-2899-4833-94c6-3319ca97a7bc")
 		(property "Sheetname" "TimerSegment4"
 			(at 243.84 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -285,6 +291,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 243.84 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -336,11 +344,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "5dfb114c-24fd-4ea4-86ef-cdb89b49f213")
 		(property "Sheetname" "TimerSegment2"
 			(at 167.64 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -350,6 +360,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 167.64 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -401,11 +413,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "7f94069f-9e4a-4e3b-80ab-e90690462680")
 		(property "Sheetname" "TimerSegment5"
 			(at 281.94 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -415,6 +429,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 281.94 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -466,11 +482,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "94b1ba2e-1fa2-4fa7-95ce-9231430d266b")
 		(property "Sheetname" "TimerSegment"
 			(at 91.44 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -480,6 +498,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 91.44 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -531,11 +551,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "bd6d5a1c-a818-4282-bd0a-709230f0f564")
 		(property "Sheetname" "TimerSegment3"
 			(at 205.74 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -545,6 +567,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 205.74 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -596,11 +620,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "c126b952-37c8-49f8-8a2a-98bea4822328")
 		(property "Sheetname" "TimerSegment1"
 			(at 129.54 118.6684 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -610,6 +636,8 @@
 		)
 		(property "Sheetfile" "TimerSegment.kicad_sch"
 			(at 129.54 135.2046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
