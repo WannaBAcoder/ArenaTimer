@@ -2,4 +2,5 @@
 	(version 7)
 	(lib (name "2060-452_998-404") (type "KiCad") (uri "${KIPRJMOD}/Libraries/Symbols/2060-452_998-404.kicad_sym") (options "") (descr ""))
 	(lib (name "PJ-082BH") (type "KiCad") (uri "${KIPRJMOD}/Libraries/Symbols/PJ-082BH.kicad_sym") (options "") (descr ""))
+	(lib (name "esp32_module") (type "KiCad") (uri "${KIPRJMOD}/Libraries/Symbols/esp32_module.kicad_sym") (options "") (descr ""))
 )

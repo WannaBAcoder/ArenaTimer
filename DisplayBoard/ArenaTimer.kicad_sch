@@ -4,6 +4,12 @@
 	(generator_version "10.0")
 	(uuid "2260d661-eea4-49a1-9161-db3d613eeecd")
 	(paper "B")
+	(title_block
+		(title "Arena Timer")
+		(date "2026-05-26")
+		(rev "3")
+		(company "SEMO Combat Robotics, Vinnie Marco")
+	)
 	(lib_symbols
 		(symbol "Connector:Conn_01x02_Pin"
 			(pin_names
@@ -4893,6 +4899,82 @@
 		(color 0 0 0 0)
 		(uuid "eb68c85f-cdcd-43d1-aad7-099d1b78985f")
 	)
+	(no_connect
+		(at 373.38 38.1)
+		(uuid "1d1a8ad5-4860-4eb3-a124-3ec8251c0355")
+	)
+	(no_connect
+		(at 373.38 45.72)
+		(uuid "1d1ee051-d74e-47c3-b03e-c8c256330222")
+	)
+	(no_connect
+		(at 373.38 40.64)
+		(uuid "1e2f0fdd-341d-4a80-95ff-12545db0b31a")
+	)
+	(no_connect
+		(at 351.79 210.82)
+		(uuid "1e44f03e-a40d-4820-ac12-3ad7a7d3cdcb")
+	)
+	(no_connect
+		(at 373.38 68.58)
+		(uuid "2d0862e6-0776-42fe-9247-c20725e95440")
+	)
+	(no_connect
+		(at 344.17 45.72)
+		(uuid "375be782-f74d-487f-9ed3-dc791bc66e70")
+	)
+	(no_connect
+		(at 373.38 53.34)
+		(uuid "4aacfe32-6ef7-4293-872c-bda816114cf5")
+	)
+	(no_connect
+		(at 344.17 43.18)
+		(uuid "52ca7d63-527e-4918-9e1c-437c5cf8aa1d")
+	)
+	(no_connect
+		(at 373.38 43.18)
+		(uuid "6e33ed7b-a178-4f32-8395-fc27054b0db9")
+	)
+	(no_connect
+		(at 344.17 48.26)
+		(uuid "77b00ab3-b1b2-4da1-b748-5ce697860025")
+	)
+	(no_connect
+		(at 344.17 55.88)
+		(uuid "837ecf25-a802-49a4-90d2-666bac983c2b")
+	)
+	(no_connect
+		(at 344.17 38.1)
+		(uuid "9b90e576-6210-46ff-843e-719d2d0b393f")
+	)
+	(no_connect
+		(at 344.17 50.8)
+		(uuid "ca1d5a89-d647-4608-a4d0-2098b32f73a9")
+	)
+	(no_connect
+		(at 344.17 58.42)
+		(uuid "d0974d30-9756-4a4a-be23-1d025f7c1521")
+	)
+	(no_connect
+		(at 351.79 215.9)
+		(uuid "d9bbe5c0-1ae9-40de-aa85-2043e27c3547")
+	)
+	(no_connect
+		(at 344.17 53.34)
+		(uuid "da3d0f71-755b-496d-bb6a-9433e0dd9aa4")
+	)
+	(no_connect
+		(at 336.55 213.36)
+		(uuid "e504804b-049e-4002-97af-a6a24ecc099a")
+	)
+	(no_connect
+		(at 344.17 40.64)
+		(uuid "ec5e8d54-9cda-4822-9072-dd1f73fd6785")
+	)
+	(no_connect
+		(at 373.38 50.8)
+		(uuid "f9d180a0-bb94-461c-9d11-fb9b0ab901a6")
+	)
 	(wire
 		(pts
 			(xy 254 63.5) (xy 248.92 63.5)
@@ -5415,7 +5497,7 @@
 	)
 	(wire
 		(pts
-			(xy 393.7 49.53) (xy 381 49.53)
+			(xy 386.08 48.26) (xy 373.38 48.26)
 		)
 		(stroke
 			(width 0)
@@ -6999,7 +7081,7 @@
 	)
 	(global_label "RELAY_EN"
 		(shape input)
-		(at 393.7 49.53 0)
+		(at 386.08 48.26 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -7009,7 +7091,7 @@
 		)
 		(uuid "8b586268-25b7-434d-a29c-ede447709b22")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 405.7566 49.53 0)
+			(at 398.1366 48.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7578,6 +7660,117 @@
 		)
 	)
 	(symbol
+		(lib_id "Relay:G5V-2_Split")
+		(at 344.17 213.36 270)
+		(unit 3)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files no)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "12183047-8dde-454a-8a94-d7725b574bf4")
+		(property "Reference" "K1"
+			(at 344.17 205.74 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "G5V-2_Split"
+			(at 344.17 208.28 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Relay_THT:Relay_DPDT_Omron_G5V-2"
+			(at 340.36 219.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" "http://omronfs.omron.com/en_US/ecb/products/pdf/en-g5v_2.pdf"
+			(at 344.17 213.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Relay Miniature Omron DPDT"
+			(at 344.17 213.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C27269"
+			(at 344.17 213.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "13"
+			(uuid "2cefc153-ee0b-41f6-bb6e-39046bd4e787")
+		)
+		(pin "8"
+			(uuid "834030d6-02af-4594-b9f8-cf005ed2ed89")
+		)
+		(pin "16"
+			(uuid "1e93a59e-a109-4e49-a34f-cef85dfc964b")
+		)
+		(pin "11"
+			(uuid "5d913183-7ad3-4f00-bf3d-47509525544c")
+		)
+		(pin "1"
+			(uuid "438bbb03-e702-4189-9062-53099d26a495")
+		)
+		(pin "4"
+			(uuid "b41613cb-f1ed-44b8-bb5b-d506a6692217")
+		)
+		(pin "9"
+			(uuid "a1dd7681-fab0-408a-b947-511087a0fe97")
+		)
+		(pin "6"
+			(uuid "685fbab6-32b9-46f9-860b-69303671a904")
+		)
+		(instances
+			(project "ArenaTimer"
+				(path "/2260d661-eea4-49a1-9161-db3d613eeecd"
+					(reference "K1")
+					(unit 3)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R_US")
 		(at 294.64 213.36 0)
 		(unit 1)
@@ -7781,7 +7974,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TerminalBlock:TerminalBlock_bornier-3_P5.08mm"
+		(property "Footprint" "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm"
 			(at 369.57 194.31 0)
 			(hide yes)
 			(show_name no)
