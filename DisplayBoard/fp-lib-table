@@ -2,4 +2,5 @@
 	(version 7)
 	(lib (name "SAMESKY_PJ-082BH") (type "KiCad") (uri "${KIPRJMOD}/Libraries/Footprints/SAMESKY_PJ-082BH.pretty") (options "") (descr ""))
 	(lib (name "WAGO_2060-452_998-404") (type "KiCad") (uri "${KIPRJMOD}/Libraries/Footprints/WAGO_2060-452_998-404.pretty") (options "") (descr ""))
+	(lib (name "SEMO") (type "KiCad") (uri "${KIPRJMOD}/Libraries/Footprints/SEMO.pretty") (options "") (descr ""))
 )
