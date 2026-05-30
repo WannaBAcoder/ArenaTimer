@@ -60,7 +60,7 @@
           "hatch_smoothing_level": 0,
           "hatch_smoothing_value": 0.1,
           "hatch_thickness": 1.0,
-          "min_clearance": 0.2032,
+          "min_clearance": 0.0,
           "min_island_area": 10.0,
           "min_thickness": 0.25,
           "pad_connection": 1,
@@ -213,7 +213,8 @@
       "track_widths": [
         0.0,
         0.2032,
-        0.3048
+        0.3048,
+        1.0
       ],
       "tuning_pattern_settings": {
         "diff_pair_defaults": {
@@ -669,7 +670,7 @@
         "uuid": "a502d111-869c-4ffb-960f-5db266c8a405"
       }
     ],
-    "used_designators": "U1,J1-2",
+    "used_designators": "R1,#PWR16,D1",
     "variants": []
   },
   "sheets": [

@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "WAGO_2060-452_998-404") (type "KiCad") (uri "C:/Users/vinni/Documents/GitHub/ArenaTimer/DisplayBoard/Libraries/Footprints/WAGO_2060-452_998-404.pretty") (options "") (descr ""))
+)
