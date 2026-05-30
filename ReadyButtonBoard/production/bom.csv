@@ -1,4 +1,6 @@
 ﻿Designator,Footprint,Quantity,Value,LCSC Part #
-J1,PinHeader_1x02_P2.54mm_Vertical,1,~,
-J2,JST_EH_S2B-EH_1x02_P2.50mm_Horizontal,1,Conn_01x02_Socket,
-SW1,SW_PUSH-12mm,1,~,C5377619
+D1,0603,1,Red,C2286
+"J1, J2",PinSocket_1x08_P2.54mm_Vertical,2,Conn_01x08_Socket,C42431840
+J9,2060-452_998-404,1,WAGO,C2765055
+R1,0603,1,470,C23179
+SW1,SW_PUSH-12mm,1,START,C2888699 
