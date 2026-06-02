@@ -12918,7 +12918,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1N1007, SMA"
+		(property "Value" "1N4007, SMA"
 			(at 308.61 198.1199 90)
 			(show_name no)
 			(do_not_autoplace no)
