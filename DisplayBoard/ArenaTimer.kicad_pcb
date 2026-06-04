@@ -62156,7 +62156,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C5224267"
+		(property "LCSC" "C5224279"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -64034,7 +64034,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "1N1007, SMA"
+		(property "Value" "1N4007, SMA"
 			(at 0 -2.6 0)
 			(layer "B.Fab")
 			(uuid "4fb2cecb-4f1b-4a15-a9fd-4ff379c6ca66")
@@ -69038,7 +69038,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C5224267"
+		(property "LCSC" "C5224279"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
