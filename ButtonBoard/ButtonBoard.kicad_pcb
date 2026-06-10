@@ -1157,15 +1157,15 @@
 			(uuid "ce9384b9-3ccc-4176-b109-8418a8d3e7b1")
 		)
 		(embedded_fonts no)
-		(model "${KICAD8_3DMODEL_DIR}/Button_Switch_THT.3dshapes/SW_PUSH-12mm.wrl"
+		(model "C:/Users/vinni/Documents/GitHub/ArenaTimer/ButtonBoard/Same_Sky_TS14-1212-120-BK-260-SCR-D.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 6 -2.5 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 -0 -0)
 			)
 		)
 	)
@@ -2148,15 +2148,15 @@
 			(uuid "be967d1c-8688-4c2b-a45e-2c026bd3f1db")
 		)
 		(embedded_fonts no)
-		(model "${KICAD8_3DMODEL_DIR}/Button_Switch_THT.3dshapes/SW_PUSH-12mm.wrl"
+		(model "C:/Users/vinni/Documents/GitHub/ArenaTimer/ButtonBoard/Same_Sky_TS14-1212-120-BK-260-SCR-D.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 6 -2.5 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 -0 -0)
 			)
 		)
 	)
@@ -2752,15 +2752,15 @@
 			(uuid "99b25249-8414-410a-b9b2-a086efb82cf1")
 		)
 		(embedded_fonts no)
-		(model "${KICAD8_3DMODEL_DIR}/Button_Switch_THT.3dshapes/SW_PUSH-12mm.wrl"
+		(model "C:/Users/vinni/Documents/GitHub/ArenaTimer/ButtonBoard/Same_Sky_TS14-1212-120-BK-260-SCR-D.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 6 -2.5 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 -0 -0)
 			)
 		)
 	)
@@ -3012,15 +3012,15 @@
 			(uuid "913dfee4-cba5-440a-8913-2b11ac982cfa")
 		)
 		(embedded_fonts no)
-		(model "${KICAD8_3DMODEL_DIR}/Button_Switch_THT.3dshapes/SW_PUSH-12mm.wrl"
+		(model "C:/Users/vinni/Documents/GitHub/ArenaTimer/ButtonBoard/Same_Sky_TS14-1212-120-BK-260-SCR-D.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 6 -2.5 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 -0 -0)
 			)
 		)
 	)
@@ -3443,15 +3443,15 @@
 			(uuid "220082ce-c17f-40a4-a02f-810716232151")
 		)
 		(embedded_fonts no)
-		(model "${KICAD8_3DMODEL_DIR}/Button_Switch_THT.3dshapes/SW_PUSH-12mm.wrl"
+		(model "C:/Users/vinni/Documents/GitHub/ArenaTimer/ButtonBoard/Same_Sky_TS14-1212-120-BK-260-SCR-D.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 6 -2.5 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 -0 -0)
 			)
 		)
 	)
@@ -5398,46 +5398,6 @@
 		(uuid "c9a245e2-2512-4b27-a40e-d5a01be630a0")
 	)
 	(segment
-		(start 161.8 67.9)
-		(end 158.8 70.9)
-		(width 1)
-		(layer "B.Cu")
-		(net "+5V")
-		(uuid "104a4b5c-6f93-415d-8e95-d4697c7b2f55")
-	)
-	(segment
-		(start 161.8 62.364987)
-		(end 161.8 67.9)
-		(width 1)
-		(layer "B.Cu")
-		(net "+5V")
-		(uuid "5851dc24-7b3f-4d34-bc10-4b6b17a63fec")
-	)
-	(segment
-		(start 154.8 70.9)
-		(end 154.7 71)
-		(width 1)
-		(layer "B.Cu")
-		(net "+5V")
-		(uuid "736e65b4-3374-49e7-bcdb-57cf5dc2c965")
-	)
-	(segment
-		(start 161.9 54.6)
-		(end 161.9 63.85)
-		(width 1)
-		(layer "B.Cu")
-		(net "+5V")
-		(uuid "855e0d49-6f0d-4bf5-9097-d3fc50c0d8a3")
-	)
-	(segment
-		(start 158.8 70.9)
-		(end 154.8 70.9)
-		(width 1)
-		(layer "B.Cu")
-		(net "+5V")
-		(uuid "e81cdbf2-bca3-466d-8967-b6907827bc3f")
-	)
-	(segment
 		(start 163.2125 48)
 		(end 160.825 48)
 		(width 0.2)
@@ -5508,6 +5468,46 @@
 		(layer "F.Cu")
 		(net "Net-(J1-Pin_3)")
 		(uuid "fbb64dc9-efc4-41f8-a1dd-65f386741875")
+	)
+	(segment
+		(start 161.8 67.9)
+		(end 158.8 70.9)
+		(width 1)
+		(layer "B.Cu")
+		(net "+5V")
+		(uuid "104a4b5c-6f93-415d-8e95-d4697c7b2f55")
+	)
+	(segment
+		(start 161.8 62.364987)
+		(end 161.8 67.9)
+		(width 1)
+		(layer "B.Cu")
+		(net "+5V")
+		(uuid "5851dc24-7b3f-4d34-bc10-4b6b17a63fec")
+	)
+	(segment
+		(start 154.8 70.9)
+		(end 154.7 71)
+		(width 1)
+		(layer "B.Cu")
+		(net "+5V")
+		(uuid "736e65b4-3374-49e7-bcdb-57cf5dc2c965")
+	)
+	(segment
+		(start 161.9 54.6)
+		(end 161.9 63.85)
+		(width 1)
+		(layer "B.Cu")
+		(net "+5V")
+		(uuid "855e0d49-6f0d-4bf5-9097-d3fc50c0d8a3")
+	)
+	(segment
+		(start 158.8 70.9)
+		(end 154.8 70.9)
+		(width 1)
+		(layer "B.Cu")
+		(net "+5V")
+		(uuid "e81cdbf2-bca3-466d-8967-b6907827bc3f")
 	)
 	(zone
 		(net "GND")
