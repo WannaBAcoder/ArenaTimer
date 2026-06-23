@@ -49,6 +49,43 @@ void setDigit(int digit, int offset, bool inverted) {
     }
 }
 
+void setChar(char c, int offset, bool inverted) {
+    // 7-segment bit pattern font map (A, B, C, D, E, F, G)
+    uint8_t segments = 0;
+    switch (c) {
+        case 't': segments = 0b0001111; break; // D, E, F, G
+        case 'A': segments = 0b1110111; break; // A, B, C, E, F, G
+        case 'P': segments = 0b1100111; break; // A, B, E, F, G
+        case 'O': segments = 0b1111110; break; // A, B, C, D, E, F (Capital O)
+        case 'U': segments = 0b0111110; break; // B, C, D, E, F (Capital U)
+        default:  segments = 0b0000000; break; // Blank space
+    }
+
+    static const uint8_t flipSegMap[7] = {3, 4, 5, 0, 1, 2, 6};
+    static const uint8_t invertedMap[7] = {3, 4, 5, 0, 1, 2, 6};
+
+    for (int i = 0; i < 7; i++) {
+        int segmentIndex = inverted ? invertedMap[i] : i;
+        
+        if (displayInverted) {
+            segmentIndex = flipSegMap[segmentIndex];
+        }
+
+        int ledIndex = offset + segmentIndex * 7;
+        
+        for (int j = 0; j < 7; j++) {
+            int pixelOffset = j;
+            if (displayInverted) {
+                pixelOffset = 6 - j; 
+            }
+            
+            // Check the specific bit state for this segment
+            bool bitActive = (segments >> (6 - i)) & 0x01;
+            setDigitLEDs(ledIndex + pixelOffset, bitActive ? digitColor : CRGB::Black);
+        }
+    }
+}
+
 void setColon() {
     for (int i = 0; i < 3; i++) {
         // If inverted, we offset the colon slightly or reverse the sub-index
@@ -82,8 +119,14 @@ void updateLEDs() {
 
 void setBorder() {
     bool flip = displayInverted;
-    if(!readyRequired || (redReady && blueReady)) {
-        // Swap Blue/Red ranges if inverted
+    
+    // Force a non-white accent color if in Clock Mode, regardless of ready constraints
+    if (currentState == CLOCK_MODE) {
+        for (int i = 0; i < BORDER_LED_COUNT; i++) {
+            setBorderLEDs(i, ORANGE); 
+        }
+    } 
+    else if (!readyRequired || (redReady && blueReady)) {
         int startBlue = flip ? BORDER_LED_COUNT/2 : 0;
         int endBlue = flip ? BORDER_LED_COUNT : BORDER_LED_COUNT/2;
         int startRed = flip ? 0 : BORDER_LED_COUNT/2;

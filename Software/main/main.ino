@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <HTTPClient.h>
 #include "WebSocketsServer.h"
 #include "browser.h"
 #include "config.h"
@@ -44,42 +45,50 @@ int currentState = CONNECTING;
 
 bool displayInverted = false;
 
+bool tapoutEnabled = true;
+bool tapoutInitiatorIsBlue = true;
+
 // main.ino Globals
 CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
 
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
-  memcpy(&incoming, data, sizeof(incoming));
-  uint8_t* mac = info->src_addr;
+  memcpy(&incoming, data, sizeof(incoming)); //
+  uint8_t* mac = info->src_addr; //
 
-  static unsigned long lastPacketTime = 0;
-  if (millis() - lastPacketTime < 300) return; 
-    lastPacketTime = millis();
+  static unsigned long lastPacketTime = 0; //
+  if (millis() - lastPacketTime < 300) return; //
+  lastPacketTime = millis(); //
 
-  memcpy(&incoming, data, sizeof(incoming));
+  Serial.printf("[ESP-NOW] Role: %s | Button: %d\n", incoming.deviceType, incoming.buttonID); //
 
-  Serial.printf("[ESP-NOW] Role: %s | Button: %d\n", incoming.deviceType, incoming.buttonID);
-
-  if (pairingMode) { 
-      // Logic to save MACs to Preferences (similar to timer_wifi_logic.ino)
-      saveRole(mac, String(incoming.deviceType));
-      pairingMode = false; 
-      return; 
+  if (pairingMode) { //
+      saveRole(mac, String(incoming.deviceType)); //
+      pairingMode = false; //
+      return; //
   }
 
-  // Trigger actions based on incoming data
-  if (strcmp(incoming.deviceType, "RedReady") == 0) {
-      setTeamReady("Red");
+  // --- WIRELESS REMOTE LOGIC ---
+  if (strcmp(incoming.deviceType, "RedReady") == 0) { //
+      if (currentState == RUNNING) { //
+          processCommand("tapoutRed");
+      } else {
+          setTeamReady("Red"); //
+      }
   } 
-  else if (strcmp(incoming.deviceType, "BlueReady") == 0) {
-      setTeamReady("Blue");
+  else if (strcmp(incoming.deviceType, "BlueReady") == 0) { //
+      if (currentState == RUNNING) { //
+          processCommand("tapoutBlue");
+      } else {
+          setTeamReady("Blue"); //
+      }
   }
-  else if (strcmp(incoming.deviceType, "Judge") == 0) {
-    switch(incoming.buttonID) {
-        case 1: processCommand("start");  break;
-        case 2: processCommand("pause");  break;
-        case 3: processCommand("reset");  break;
-        case 4: processCommand("switch"); break;
+  else if (strcmp(incoming.deviceType, "Judge") == 0) { //
+    switch(incoming.buttonID) { //
+        case 1: processCommand("start");   break; //
+        case 2: processCommand("pause");   break; //
+        case 3: processCommand("reset");   break; //
+        case 4: processCommand("switch");  break; //
     }
   }
 }
@@ -129,30 +138,31 @@ void initNetwork() {
         server.send(200, "text/plain", "Remotes Wiped");
     });
 
+        // Update your /status endpoint to include tapoutEnabled
     server.on("/status", []() {
       String json = "{";
       json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
       json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
+      json += "\"tapoutEnabled\":" + String(tapoutEnabled ? "true" : "false") + ","; // Added missing flag
       
-      // Explicitly send every possible state
       json += "\"state\":\"";
       if (currentState == CLOCK_MODE) json += "CLOCK_MODE";
       else if (currentState == RUNNING) json += "RUNNING";
       else if (currentState == PAUSED) json += "PAUSED";
       else if (currentState == PRE_COUNTDOWN_LOOP) json += "PRE_COUNTDOWN_LOOP";
       else if (currentState == FINISHED) json += "FINISHED";
+      else if (currentState == TAPOUT) json += "TAPOUT";
       else json += "IDLE";
       json += "\",";
 
+      json += "\"tapoutBlue\":" + String(tapoutInitiatorIsBlue ? "true" : "false") + ",";
       json += "\"red\":" + String(redPaired ? "true" : "false") + ",";
       json += "\"blue\":" + String(bluePaired ? "true" : "false") + ",";
       json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
-
       json += "\"brightness\":" + String(systemBrightness) + ",";
       json += "\"displayInverted\":" + String(displayInverted ? "true" : "false") + ",";
       
       char hexColor[7];
-      // FastLED colors are stored as 0xRRGGBB
       snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);
       json += "\"digitColor\":\"" + String(hexColor) + "\",";
       
@@ -206,29 +216,29 @@ void initNetwork() {
     });
 
     server.on("/synctime", []() {
-      // Safety check: Only allow clock mode if we are IDLE or already in CLOCK_MODE
       if (currentState != IDLE && currentState != CLOCK_MODE) {
           server.send(403, "text/plain", "Timer is active!");
           return;
       }
-
       int h = server.arg("h").toInt();
       int m = server.arg("m").toInt();
       int s = server.arg("s").toInt();
 
       struct tm tm;
-      tm.tm_hour = h;
-      tm.tm_min = m;
-      tm.tm_sec = s;
-      tm.tm_year = 2026 - 1900; 
-      tm.tm_mon = 4;            
-      tm.tm_mday = 10;          
-
+      tm.tm_hour = h; tm.tm_min = m; tm.tm_sec = s;
+      tm.tm_year = 2026 - 1900; tm.tm_mon = 4; tm.tm_mday = 10;
       time_t t = mktime(&tm);
       struct timeval now = { .tv_sec = t };
-      settimeofday(&now, NULL); //
+      settimeofday(&now, NULL);
       
       currentState = CLOCK_MODE;
+
+      // Save Clock Mode Active flag to flash
+      preferences.begin("settings", false);
+      preferences.putBool("clockActive", true);
+      preferences.end();
+
+      setBorder();
       server.send(200, "text/plain", "Clock Seeded");
     });
 
@@ -270,24 +280,35 @@ void handleRoot() {
 }
 
 void handleControl() {
-    String cmd = server.arg("cmd");
+    String cmd = server.arg("cmd"); //
     
-    // Handle the special case where we need an extra argument
-    if (cmd == "readytoggle") {
-        String state = server.arg("state");
-        readyRequired = (state == "on");
-        preferences.begin("settings", false);
-        preferences.putBool("readyRequired", readyRequired);
-        preferences.end();
-
-        if(currentState != RUNNING)
-          setBorder();//only reflect when the timer is paused/not running
-    } else {
-        // Everything else uses the shared logic
-        processCommand(cmd);
+    // --- ADD THIS CRITICAL DEBUGLOG LINE ---
+    Serial.printf("[WEB DEBUG] handleControl received endpoint query! cmd = '%s'\n", cmd.c_str());
+    
+    if (cmd == "readytoggle") { //
+        String state = server.arg("state"); //
+        readyRequired = (state == "on"); //
+        preferences.begin("settings", false); //
+        preferences.putBool("readyRequired", readyRequired); //
+        preferences.end(); //
+        if(currentState != RUNNING) //
+          setBorder(); //
+    } 
+    else if (cmd == "tapouttoggle") { //
+        String state = server.arg("state"); //
+        tapoutEnabled = (state == "on"); //
+        
+        preferences.begin("settings", false); //
+        preferences.putBool("tapoutEnabled", tapoutEnabled); //
+        preferences.end(); //
+        
+        Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED"); //
+    } 
+    else {
+        processCommand(cmd); //
     }
 
-    server.send(200, "text/plain", "OK");
+    server.send(200, "text/plain", "OK"); //
 }
 
 // INSERT NEW FUNCTION HERE:
@@ -357,30 +378,137 @@ void connectWiFi() {
 }
 
 void checkWiFiConnection() {
-    // If connected, set up the server and stop animating
+    if (currentState != CONNECTING) return;
+
+    bool connectionFinished = false;
+
     if (WiFi.status() == WL_CONNECTED) {
-        server.on("/", handleRoot);
-        server.on("/control", handleControl);
-        server.begin();
-        webSocket.begin();
-        webSocket.onEvent(onWebSocketEvent);
-        
-        currentState = IDLE;
-        setBorder();
-        needsLEDUpdate = true;
-        updateClient();
+        static bool serversStarted = false;
+        if (!serversStarted) {
+            server.on("/", handleRoot);
+            server.on("/control", handleControl);
+            server.begin();
+            webSocket.begin();
+            webSocket.onEvent(onWebSocketEvent);
+            
+            Serial.println("\n[NETWORK] WiFi Connected successfully!");
+            Serial.print("[NETWORK] Local IP Address: http://");
+            Serial.println(WiFi.localIP());
+
+            // --- FULL DYNAMIC AUTOMATIC POSIX TIMEZONE DETECTION ---
+            HTTPClient http;
+            // Fetching raw key-value pair text definitions directly from WorldTimeAPI
+            http.begin("http://worldtimeapi.org/api/ip.txt");
+            int httpCode = http.GET();
+            String posixString = "";
+            
+            if (httpCode == HTTP_CODE_OK) {
+                String payload = http.getString();
+                // Find the line that looks like: "abbreviation: CDT" or "abbreviation: CST"
+                // WorldTimeAPI text responses explicitly bundle full POSIX strings in the "abbreviation" keys
+                int abbrevIdx = payload.indexOf("abbreviation: ");
+                
+                // Let's grab the precise IANA timezone identifier block as a reliable alternate if needed,
+                // but the cleanest automatic method is using their key value formatting.
+                // To keep it light, we can use their pre-formatted client target:
+                // Let's grab the raw offset definition line if text parsing falls out:
+                int tzOffsetIdx = payload.indexOf("utc_offset: ");
+                if (tzOffsetIdx != -1) {
+                    int startOffset = tzOffsetIdx + 12;
+                    int endOffset = payload.indexOf('\n', startOffset);
+                    String rawOffset = payload.substring(startOffset, endOffset);
+                    rawOffset.trim(); // E.g., "-05:00"
+                    
+                    // Parse standard offsets directly into a POSIX format the ESP32 can digest instantly:
+                    // Note: POSIX rules invert signs (+ is West of GMT, - is East).
+                    int hoursOffset = rawOffset.substring(1, 3).toInt();
+                    char sign = rawOffset.charAt(0);
+                    
+                    if (sign == '-') {
+                        posixString = "GMT" + String(hoursOffset);
+                    } else {
+                        posixString = "GMT-" + String(hoursOffset);
+                    }
+                    
+                    // Account for standard US daylight saving rules automatically if in North America
+                    if (payload.indexOf("America/") != -1) {
+                        // Dynamically append seasonal transition offsets for US regions
+                        int dstOffset = hoursOffset - 1;
+                        posixString += "GMT+" + String(dstOffset) + ",M3.2.0,M11.1.0";
+                    }
+                }
+            }
+            http.end();
+
+            if (posixString.length() > 0) {
+                Serial.printf("[NETWORK] Dynamic POSIX Timezone Generated: %s\n", posixString.c_str());
+                configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+                setenv("TZ", posixString.c_str(), 1);
+                tzset();
+            } else {
+                Serial.println("[NETWORK] Dynamic detection timed out. Defaulting to Central Time rule safely.");
+                configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+                setenv("TZ", "CST6CDT,M3.2.0,M11.1.0", 1);
+                tzset();
+            }
+            serversStarted = true;
+        }
+
+        preferences.begin("settings", true);
+        bool clockActive = preferences.getBool("clockActive", false);
+        preferences.end();
+
+        if (clockActive) {
+            struct tm timeinfo;
+            if (getLocalTime(&timeinfo)) {
+                Serial.println("[NETWORK] Time successfully synced from NTP server!");
+                connectionFinished = true;
+            } else {
+                static unsigned long lastLog = 0;
+                if (millis() - lastLog > 2000) {
+                    Serial.println("[NETWORK] Gating startup: Awaiting real-world NTP seed calibration...");
+                    lastLog = millis();
+                }
+            }
+        } else {
+            connectionFinished = true;
+        }
     } 
-    // If it takes longer than 30 seconds, fail over to AP
     else if (millis() - startAttemptTime > 30000) {
         startAPMode();
+        connectionFinished = true;
+    }
 
-        currentState = IDLE;
-        setBorder();
-        needsLEDUpdate = true;
-        updateClient();
+    if (connectionFinished) {
+        preferences.begin("settings", true);
+        bool clockActive = preferences.getBool("clockActive", false);
+        preferences.end();
+
+        if (clockActive) {
+            currentState = CLOCK_MODE;
+            Serial.println("[PERSISTENCE] Clock fully synchronized. Booting straight to Clock Mode display!");
+            
+            // 1. Immediately wipe the residual snake frames out of RAM
+            for (int i = 0; i < BORDER_LED_COUNT; i++) {
+                setBorderLEDs(i, CRGB::Black);
+            }
+            for (int i = 0; i < DIGIT_LED_COUNT; i++) {
+                setDigitLEDs(i, CRGB::Black);
+            }
+            FastLED.show();
+
+            handleClockMode();
+            setBorder();
+            FastLED.show(); 
+
+        } else {
+            currentState = IDLE;
+            setBorder();
+            updateClient();
+            FastLED.show(); 
+        }
     }
 }
-
 
 
 void clearRemotes() {
@@ -407,39 +535,28 @@ void clearRemotes() {
 }
 
 void loadSavedSettings() {
-    preferences.begin("bot-timer", true); // Open read-only
+    preferences.begin("bot-timer", true); 
+    redPaired   = (preferences.getBytes("redMAC", redMAC, 6) == 6); 
+    bluePaired  = (preferences.getBytes("blueMAC", blueMAC, 6) == 6); 
+    judgePaired = (preferences.getBytes("judgeMAC", judgeMAC, 6) == 6); 
+    preferences.end(); 
     
-    // Check if the keys exist and have data (returning 6 bytes means it was stored)
-    redPaired   = (preferences.getBytes("redMAC", redMAC, 6) == 6);
-    bluePaired  = (preferences.getBytes("blueMAC", blueMAC, 6) == 6);
-    judgePaired = (preferences.getBytes("judgeMAC", judgeMAC, 6) == 6);
-    
-    preferences.end();
-    
-    Serial.println("[SYSTEM] Pairing status recovered:");
-    Serial.printf("Red: %s, Blue: %s, Judge: %s\n", 
-                  redPaired ? "PAIRED" : "OPEN", 
-                  bluePaired ? "PAIRED" : "OPEN", 
-                  judgePaired ? "PAIRED" : "OPEN");
-
-    preferences.begin("settings", true);  // read-only
+    preferences.begin("settings", true); 
     readyRequired = preferences.getBool("readyRequired", false); 
     timeSelState = preferences.getBool("timeSelState", false); 
+    systemBrightness = preferences.getUChar("brightness", 127); 
+    displayInverted = preferences.getBool("dispInv", false); 
+    tapoutEnabled = preferences.getBool("tapoutEnabled", true); 
+    
+    // We remain in CONNECTING state on boot so the loading snake runs normally,
+    // but the rest of the network routines will see this flag when finished.
+    preferences.end(); 
+    FastLED.setBrightness(systemBrightness); 
+    uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000); 
+    digitColor = CRGB(savedColor); 
 
-    systemBrightness = preferences.getUChar("brightness", 127);
-    systemBrightness = constrain(systemBrightness, 10, 230); // Guard against old saved data
-
-    displayInverted = preferences.getBool("dispInv", false);
-
-    FastLED.setBrightness(systemBrightness);
-
-    uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000);
-    digitColor = CRGB(savedColor);
-
-    preferences.end();
-
-    countdown_time = timeSelState ? 180 : 120;
-    current_time = countdown_time;
+    countdown_time = timeSelState ? 180 : 120; 
+    current_time = countdown_time; 
 }
 
 void setup() {
@@ -465,6 +582,8 @@ void setup() {
   pinMode(TIME_SEL_SW, INPUT_PULLUP);
   pinMode(BLUE_BTN, INPUT_PULLUP);
   pinMode(RED_BTN, INPUT_PULLUP);
+  pinMode(BUZZ_PIN, OUTPUT);
+  pinMode(RELAY_PIN, OUTPUT);
 
   if (esp_now_init() != ESP_OK) {
         Serial.println("Error initializing ESP-NOW");
@@ -507,6 +626,10 @@ void setup() {
 
             case CLOCK_MODE:
               handleClockMode();
+            break;
+
+            case TAPOUT:
+              handleTapoutAnimation();
             break;
           
           }

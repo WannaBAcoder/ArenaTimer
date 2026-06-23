@@ -15,6 +15,8 @@
 #define LED_BUILTIN 2
 #define BLUE_BTN 4
 #define RED_BTN 16
+#define BUZZ_PIN 18
+#define RELAY_PIN 21
 
 // LED pin assignments
 #define DIGIT_PIN   5
@@ -62,6 +64,9 @@ extern bool redReady;
 
 extern bool displayInverted;
 
+extern bool tapoutEnabled; // Track if tapouts are allowed during a match
+extern bool tapoutInitiatorIsBlue;
+
 enum timerState {
     CONNECTING,
     IDLE,
@@ -70,7 +75,8 @@ enum timerState {
     RUNNING,
     PAUSED,
     FINISHED,
-    CLOCK_MODE
+    CLOCK_MODE, 
+    TAPOUT
 };
 
 extern int currentState;

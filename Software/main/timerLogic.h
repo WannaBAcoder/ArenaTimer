@@ -13,6 +13,7 @@ void transitionToMatch();
 void handlePausedBlink();
 void handleClockMode();
 void handleConnectingAnimation();
+void handleTapoutAnimation();
 
 // General logic
 void processCommand(String cmd);

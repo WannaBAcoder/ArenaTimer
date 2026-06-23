@@ -12,6 +12,10 @@ extern bool readyRequired;
 extern bool blueReady;
 extern bool redReady;
 extern volatile bool needsLEDUpdate;
+extern bool tapoutInitiatorIsBlue;
+
+bool buzzState = 0;
+bool relayState = 0;
 
 // Debounce variables for each button
 unsigned long lastDebounceTimeStart = 0;
@@ -55,46 +59,69 @@ void handleConnectingAnimation() {
 }
 
 void checkButtons() {
-  unsigned long currentMillis = millis();
+  if (Serial.available() > 0) { //
+    char rc = Serial.read(); //
+    
+    // Quick sanitization to ignore trailing newline/carriage return characters
+    if (rc == '\n' || rc == '\r') return;
 
-  // Start button
-  if (digitalRead(START_BTN) == LOW && currentMillis - lastDebounceTimeStart > debounceDelay) {
-    processCommand("start");
-    lastDebounceTimeStart = currentMillis;  // Update debounce time
-  }
+    switch (rc) {
+      case 's': // START MATCH
+        Serial.println("[SERIAL CONTROL] Start Pressed");
+        processCommand("start");
+        break;
 
-  // Pause button
-  if (digitalRead(PAUSE_BTN) == LOW && currentMillis - lastDebounceTimePause > debounceDelay) {
-    processCommand("pause");
-    lastDebounceTimePause = currentMillis;
-  }
+      case 'p': // PAUSE MATCH
+        Serial.println("[SERIAL CONTROL] Pause Pressed");
+        processCommand("pause");
+        break;
 
-  // Reset button
-  if (digitalRead(RESET_BTN) == LOW && (currentMillis - lastDebounceTimeReset > debounceDelay) 
-                  && (currentState == FINISHED || currentState == PAUSED)) {
-    processCommand("reset");
- 
-    lastDebounceTimeReset = currentMillis;
-  }
+      case 'x': // RESET MATCH
+        Serial.println("[SERIAL CONTROL] Reset Pressed");
+        processCommand("reset");
+        break;
 
-  // Time select switch
-  if (digitalRead(TIME_SEL_SW) == LOW && (currentMillis - lastDebounceTimeTimeSel > debounceDelay)  
-                  && currentState != RUNNING) {
-    processCommand("switch");
-    lastDebounceTimeTimeSel = currentMillis;
-  }
+      case 't': // TOGGLE TIME (Switch 2m/3m)
+        Serial.println("[SERIAL CONTROL] Time Selection Toggle Pressed");
+        processCommand("switch");
+        break;
 
-  if(readyRequired) {
-    // Blue Ready button
-    if (digitalRead(BLUE_BTN) == LOW && (currentMillis - lastDebounceTimeBlue > debounceDelay)) {
-      setTeamReady("Blue");
-      lastDebounceTimeBlue = millis();
-    }
+      case 'r': // RED DRIVER INTERACTION
+        Serial.println("[SERIAL TEST] Red Button Pressed"); //
+        if (currentState == RUNNING) { //
+            processCommand("tapoutRed");
+        } else if (readyRequired) { //
+            setTeamReady("Red"); //
+        }
+        break;
 
-    // Red Ready button
-    if (digitalRead(RED_BTN) == LOW && (currentMillis - lastDebounceTimeRed > debounceDelay)) {
-      setTeamReady("Red");
-      lastDebounceTimeRed = millis();
+      case '1': // beep
+        Serial.println("[SERIAL TEST] Buzzer toggle"); //
+        buzzState = !buzzState;
+        if(buzzState)
+          tone(BUZZ_PIN, 2000);
+        else
+          noTone(BUZZ_PIN);
+      break;
+
+      case '2': // relay
+        Serial.println("[SERIAL TEST] Relay toggle"); //
+        relayState = !relayState;
+        digitalWrite(RELAY_PIN, relayState);
+      break;
+
+      case 'b': // BLUE DRIVER INTERACTION
+        Serial.println("[SERIAL TEST] Blue Button Pressed"); //
+        if (currentState == RUNNING) { //
+            processCommand("tapoutBlue");
+        } else if (readyRequired) { //
+            setTeamReady("Blue"); //
+        }
+        break;
+
+      default:
+        Serial.printf("[SERIAL ALERT] Unknown hotkey instruction: '%c'\n", rc);
+        break;
     }
   }
 }
@@ -231,47 +258,80 @@ void transitionToMatch() {
 }
 
 void processCommand(String cmd) {
-  if (cmd == "start") {
-    if (currentState == IDLE || currentState == PAUSED) {
-        
-      if (readyRequired && (!redReady || !blueReady)) {
-          Serial.println("[LOCKOUT] Start denied: Drivers not ready.");
+  Serial.printf("[ENGINE DEBUG] processCommand received tracking request: '%s' | Current State is: %d\n", cmd.c_str(), currentState);
+
+  if (cmd == "start") { 
+    if (currentState == IDLE || currentState == PAUSED) { 
+      if (readyRequired && (!redReady || !blueReady)) { 
+          Serial.println("[LOCKOUT] Start denied: Drivers not ready."); 
           return; 
       }
-      
-      currentState = PRE_COUNTDOWN_INIT;
-      blinkState = true;
-      return; // Exit early since we handled the command
+      currentState = PRE_COUNTDOWN_INIT; 
+      blinkState = true; 
+      return; 
     }
-    
-    Serial.println("[LOCKOUT] Start ignored: System not in IDLE or PAUSED.");
-    return;
+    Serial.println("[LOCKOUT] Start ignored: System not in IDLE or PAUSED."); 
+    return; 
   }
-  else if (cmd == "pause" && currentState == RUNNING) {
-    currentState = PAUSED;
-  } 
-  else if (cmd == "reset" && (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE)) {
-    blueReady = redReady = false;
-    currentState = IDLE;
-    current_time = countdown_time;
-    blinkState = true;
-
-    setBorder();
+  else if (cmd == "pause" && currentState == RUNNING) { 
+    currentState = PAUSED; 
     updateClient();
     updateLEDs();
   } 
-  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) {
-    countdown_time = (countdown_time == 120) ? 180 : 120;
-    current_time = countdown_time;
+  else if (cmd == "reset") { 
+    if (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE || currentState == TAPOUT) { 
+        Serial.println("[SYSTEM] Executing deep display flush and state reset...");
+        
+        blueReady = redReady = false; 
+        currentState = IDLE; 
+        current_time = countdown_time; 
+        blinkState = true; 
 
-    bool newTimeSelState = (countdown_time == 180);
+        setBorder(); 
+        updateLEDs(); 
+        updateClient();
+        FastLED.show();//force LED update
+    }
+  } 
+  else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING) {
+    if (tapoutEnabled) {
+        tapoutInitiatorIsBlue = (cmd == "tapoutBlue");
+        currentState = TAPOUT;
+        Serial.printf("[MATCH EVENT] TAPOUT ENFORCED BY %s!\n", tapoutInitiatorIsBlue ? "BLUE" : "RED");
+        updateClient();
+    } else {
+        Serial.printf("[SYSTEM IGNORE] %s pressed button, but Tapouts are DISABLED.\n", (cmd == "tapoutBlue") ? "Blue" : "Red");
+    }
+  }
+  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) { 
+    countdown_time = (countdown_time == 120) ? 180 : 120; 
+    current_time = countdown_time; //
+    bool newTimeSelState = (countdown_time == 180); 
+    
+    preferences.begin("settings", false); 
+    preferences.putBool("timeSelState", newTimeSelState); 
+    preferences.end(); 
+    
+    updateClient(); 
+    updateLEDs(); 
+  }
 
+  else if (cmd == "clockOff") {
+    Serial.println("[PERSISTENCE] Clock Mode toggled OFF via Web UI. Updating flash preference...");
+    
+    // Save the disabled preference straight to flash memory right here
     preferences.begin("settings", false);
-    preferences.putBool("timeSelState", newTimeSelState);
+    preferences.putBool("clockActive", false);
     preferences.end();
 
-    updateClient();
+    // Drop the hardware back to standard match IDLE state
+    currentState = IDLE;
+    current_time = countdown_time;
+    
+    setBorder();
     updateLEDs();
+    updateClient();
+    FastLED.show();
   }
 }
 
@@ -293,33 +353,98 @@ void setTeamReady(String team) {
 
 void handleClockMode() {
   static unsigned long lastClockUpdate = 0;
-  if (millis() - lastClockUpdate < 1000 && !needsLEDUpdate) return;
-  lastClockUpdate = millis();
+  
+  // Throttle to update exactly once per second unless an immediate refresh is requested
+  if (millis() - lastClockUpdate < 1000 && !needsLEDUpdate) return; //
+  lastClockUpdate = millis(); //
 
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) return;
+  struct tm timeinfo; //
+  // We know this will succeed because checkWiFiConnection() gates entry behind it!
+  if (!getLocalTime(&timeinfo)) return; //
 
-  int hour = timeinfo.tm_hour;
-  int minute = timeinfo.tm_min;
+  int hour = timeinfo.tm_hour;   
+  int minute = timeinfo.tm_min;  
 
-  if (hour == 0) hour = 12;
-  if (hour > 12) hour -= 12;
+  if (hour == 0) hour = 12; //
+  if (hour > 12) hour -= 12; //
 
-  if (!displayInverted) {
-      // Normal: Hours on Left, Minutes on Right
-      setDigit(hour / 10, 0, false);
-      setDigit(hour % 10, 49, false);
-      setColon();
-      setDigit(minute / 10, 150, true);
-      setDigit(minute % 10, 101, true);
+  if (!displayInverted) { //
+      setDigit(hour / 10, 0, false); //
+      setDigit(hour % 10, 49, false); //
+      setColon(); //
+      setDigit(minute / 10, 150, true); //
+      setDigit(minute % 10, 101, true); //
   } else {
-      // Inverted: Minutes on Left (Indices 0/49), Hours on Right (Indices 150/101)
-      setDigit(minute % 10, 0, false);
-      setDigit(minute / 10, 49, false);
-      setColon();
-      setDigit(hour % 10, 150, true);
-      setDigit(hour / 10, 101, true);
+      setDigit(minute % 10, 0, false); //
+      setDigit(minute / 10, 49, false); //
+      setColon(); //
+      setDigit(hour % 10, 150, true); //
+      setDigit(hour / 10, 101, true); //
   }
   
   needsLEDUpdate = true;
+}
+
+void handleTapoutAnimation() {
+  static unsigned long lastTapoutUpdate = 0;
+  static bool flashToggle = false;
+  static int scrollPos = 0; 
+  
+  unsigned long currentMillis = millis();
+  
+  // Clean, lightweight boolean evaluation instead of string comparison
+  CRGB teamColor = tapoutInitiatorIsBlue ? CRGB::Blue : CRGB::Red;
+  
+  // 1. Synchronized Border Flash
+  if (currentMillis - lastTapoutUpdate >= 275) { 
+    lastTapoutUpdate = currentMillis;
+    flashToggle = !flashToggle;
+    
+    CRGB borderFlashColor = flashToggle ? teamColor : ORANGE;
+    for (int i = 0; i < BORDER_LED_COUNT; i++) {
+      setBorderLEDs(i, borderFlashColor);
+    }
+    needsLEDUpdate = true; //
+  }
+
+  // 2. Text Marquee Scroll (275ms)
+  static unsigned long lastScrollUpdate = 0;
+  if (currentMillis - lastScrollUpdate >= 275) { 
+    lastScrollUpdate = currentMillis;
+
+    const char marqueeText[] = "    tAP OUt    ";
+    const int textLength = 15;
+
+    for (int i = 0; i < DIGIT_LED_COUNT; i++) {
+      setDigitLEDs(i, CRGB::Black);
+    }
+
+    char d1 = marqueeText[scrollPos];
+    char d2 = marqueeText[scrollPos + 1];
+    char d3 = marqueeText[scrollPos + 2];
+    char d4 = marqueeText[scrollPos + 3];
+
+    CRGB originalColor = digitColor; //
+    digitColor = teamColor;
+
+    if (!displayInverted) {
+      setChar(d1, 0, false);   //
+      setChar(d2, 49, false);  //
+      setChar(d3, 150, true);  //
+      setChar(d4, 101, true);  //
+    } else {
+      setChar(d4, 0, false);   
+      setChar(d3, 49, false);  
+      setChar(d2, 150, true);  
+      setChar(d1, 101, true);  
+    }
+
+    digitColor = originalColor;
+    needsLEDUpdate = true; //
+
+    scrollPos++;
+    if (scrollPos > (textLength - 5)) {
+      scrollPos = 0; 
+    }
+  }
 }

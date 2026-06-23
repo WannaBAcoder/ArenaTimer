@@ -66,6 +66,11 @@ const char* html = R"rawliteral(
                 <label for="readyToggle" style="display:inline;">Require Driver Ready</label>
             </div>
 
+            <div id="tapoutSection" style="margin-top: 10px;">
+                <input type="checkbox" id="tapoutToggle" onchange="toggleTapoutAllow()"> 
+                <label for="tapoutToggle" style="display:inline;">Enable Tapout</label>
+            </div>
+
             <div id="clockSection" style="margin-top: 10px;">
                 <input type="checkbox" id="clockToggle" onchange="toggleClockMode()"> 
                 <label for="clockToggle" style="display:inline;">Enable Clock Mode</label>
@@ -105,6 +110,7 @@ const char* html = R"rawliteral(
                 document.getElementById('countdown').textContent = event.data;
             };
 
+            // Synchronize ALL checkboxes immediately on initial page load refresh
             window.onload = function() {
                 fetch('/status')
                 .then(r => r.json())
@@ -112,6 +118,12 @@ const char* html = R"rawliteral(
                     if(data.brightness !== undefined) document.getElementById('brightSlider').value = data.brightness;
                     if(data.digitColor) document.getElementById('colorPicker').value = "#" + data.digitColor;
                     if(data.displayInverted !== undefined) document.getElementById('flipToggle').checked = data.displayInverted;
+                    if(data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
+                    if(data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
+                    
+                    const isClockMode = (data.state === "CLOCK_MODE");
+                    document.getElementById('clockToggle').checked = isClockMode;
+                    updateControls(isClockMode);
                 });
             };
 
@@ -137,7 +149,7 @@ const char* html = R"rawliteral(
                     fetch(`/synctime?h=${now.getHours()}&m=${now.getMinutes()}&s=${now.getSeconds()}`);
                     updateControls(true);
                 } else {
-                    controlTimer('reset');
+                    fetch('/control?cmd=clockOff');
                     updateControls(false);
                 }
                 setTimeout(() => { isLockingUI = false; }, 1500);
@@ -152,7 +164,9 @@ const char* html = R"rawliteral(
             function controlTimer(action) { fetch(`/control?cmd=${action}`); }
             function toggleTime() { fetch('/control?cmd=switch'); }
             function toggleReady() { fetch(`/control?cmd=readytoggle&state=${document.getElementById('readyToggle').checked ? "on" : "off"}`); }
+            function toggleTapoutAllow() { fetch(`/control?cmd=tapouttoggle&state=${document.getElementById('tapoutToggle').checked ? "on" : "off"}`); }
             function startPairing() { fetch('/pair'); }
+            // Confirms wiping configuration settings cleanly
             function wipeRemotes() { if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); }
             function applyTime() { fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
             
@@ -172,23 +186,36 @@ const char* html = R"rawliteral(
                         
                         const isRunning = (data.state === "RUNNING" || data.state === "PRE_COUNTDOWN_LOOP");
                         const isPaused = (data.state === "PAUSED");
+                        const isTapout = (data.state === "TAPOUT");
                         const isIdle = (data.state === "IDLE" || data.state === "FINISHED" || data.state === "CLOCK_MODE");
 
+                        const timerControls = document.getElementById('timerControls');
+                        if (isTapout || isPaused || isIdle) {
+                            timerControls.classList.remove('disabled-ui');
+                        }
+
+                        const countdownEl = document.getElementById('countdown');
+                        if (isTapout) {
+                            countdownEl.style.color = data.tapoutBlue ? '#0011ff' : '#ff3333';
+                        } else {
+                            countdownEl.style.color = 'white';
+                        }
+
                         // 1. TIMER BUTTON LOCKOUT (START, RESET, SWITCH, SET TIME)
-                        // All gray out when running, Reset/Switch also stay grayed when paused
                         const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn'];
-                        const shouldGrayOut = isRunning || (isPaused && (lastKnownState === "PAUSED"));
                         
                         lockGroup.forEach(id => {
                             const btn = document.getElementById(id);
                             if (isRunning) {
                                 btn.classList.add('blocked-feature');
                                 btn.disabled = true;
-                            } else if (isPaused && (id === 'resetBtn' || id === 'startBtn')) {
-                                // Keep reset and start active if paused
+                            } else if ((isPaused || isTapout) && id === 'resetBtn') {
                                 btn.classList.remove('blocked-feature');
                                 btn.disabled = false;
-                            } else if (!isIdle) {
+                            } else if (isPaused && id === 'startBtn') {
+                                btn.classList.remove('blocked-feature');
+                                btn.disabled = false;
+                            } else if (!isIdle && !isTapout) {
                                 btn.classList.add('blocked-feature');
                                 btn.disabled = true;
                             } else {
@@ -202,7 +229,7 @@ const char* html = R"rawliteral(
                         else document.getElementById('pauseBtn').classList.remove('blocked-feature');
 
                         // 2. SETTINGS LOCKOUT (FULL SECTION GRAY OUT)
-                        const shouldLockSettings = !isIdle;
+                        const shouldLockSettings = !isIdle && !isTapout;
                         const sections = ['systemStatusSection', 'displaySection', 'wifiSection', 'manualTimeSection'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
@@ -213,21 +240,31 @@ const char* html = R"rawliteral(
                         });
 
                         // 3. INDIVIDUAL INPUTS
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'colorPicker', 'brightSlider', 'flipToggle'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
-                            if (el) el.disabled = shouldLockSettings;
+                            if (el) {
+                                if (id === 'tapoutToggle') {
+                                    el.disabled = false; 
+                                } else {
+                                    el.disabled = shouldLockSettings;
+                                }
+                            }
                         });
 
                         if (!isLockingUI) {
                             const isClockMode = (data.state === "CLOCK_MODE");
                             document.getElementById('clockToggle').checked = isClockMode;
                             updateControls(isClockMode);
+
+                            if (data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
+                            if (data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
                         }
                     })
                     .catch(e => console.error(e));
             }, 1000);
 
+            // Reflect state colors instantly inside backend console status arrays
             function updateStatus(id, isPaired) {
                 let el = document.getElementById(id);
                 el.textContent = isPaired ? 'PAIRED' : 'OPEN';
