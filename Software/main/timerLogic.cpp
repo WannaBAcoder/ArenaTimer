@@ -288,7 +288,7 @@ void processCommand(String cmd) {
     currentState = PAUSED; 
 
     lastBlinkTime = 0; 
-    //blinkState = true;
+    blinkState = true;
     triggerBeep(300);
     updateClient();
   } 
