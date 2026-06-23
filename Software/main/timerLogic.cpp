@@ -146,8 +146,8 @@ void handlePausedBlink() {
           setDigitLEDs(i, CRGB::Black);
       }
     }
-    needsLEDUpdate = true; // Signal the Task to call FastLED.show()
   }
+  needsLEDUpdate = true; // Signal the Task to call FastLED.show()
 }
 
 void startPreCountdown() {
@@ -288,10 +288,9 @@ void processCommand(String cmd) {
     currentState = PAUSED; 
 
     lastBlinkTime = 0; 
-
+    //blinkState = true;
     triggerBeep(300);
     updateClient();
-    updateLEDs();
   } 
   else if (cmd == "reset") { 
     if (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE || currentState == TAPOUT) { 
