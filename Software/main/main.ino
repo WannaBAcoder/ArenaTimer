@@ -48,6 +48,11 @@ bool displayInverted = false;
 bool tapoutEnabled = true;
 bool tapoutInitiatorIsBlue = true;
 
+bool audioEnabled = true;
+uint8_t audioOutputSelect = 0; // 0 = Buzzer, 1 = Relay
+uint32_t beepEndTime = 0;
+bool beepActive = false;
+
 // main.ino Globals
 CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
@@ -143,8 +148,10 @@ void initNetwork() {
       String json = "{";
       json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
       json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
-      json += "\"tapoutEnabled\":" + String(tapoutEnabled ? "true" : "false") + ","; // Added missing flag
-      
+      json += "\"tapoutEnabled\":" + String(tapoutEnabled ? "true" : "false") + ","; // Existing
+      json += "\"audioEnabled\":" + String(audioEnabled ? "true" : "false") + ",";
+      json += "\"audioOutput\":" + String(audioOutputSelect) + ",";
+        
       json += "\"state\":\"";
       if (currentState == CLOCK_MODE) json += "CLOCK_MODE";
       else if (currentState == RUNNING) json += "RUNNING";
@@ -259,6 +266,23 @@ void initNetwork() {
       
       setBorder();
       server.send(200, "text/plain", displayInverted ? "Inverted" : "Normal");
+    });
+
+    server.on("/setaudio", []() {
+        if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
+            server.send(403, "text/plain", "Locked during match");
+            return;
+        }
+        
+        if (server.hasArg("enabled")) audioEnabled = (server.arg("enabled") == "true");
+        if (server.hasArg("output")) audioOutputSelect = server.arg("output").toInt();
+
+        preferences.begin("settings", false);
+        preferences.putBool("audioEnabled", audioEnabled);
+        preferences.putUChar("audioOutput", audioOutputSelect);
+        preferences.end();
+
+        server.send(200, "text/plain", "Audio Settings Saved");
     });
 
     // 5. Start Communication Services
@@ -547,6 +571,9 @@ void loadSavedSettings() {
     systemBrightness = preferences.getUChar("brightness", 127); 
     displayInverted = preferences.getBool("dispInv", false); 
     tapoutEnabled = preferences.getBool("tapoutEnabled", true); 
+
+    audioEnabled = preferences.getBool("audioEnabled", true);
+    audioOutputSelect = preferences.getUChar("audioOutput", 0);
     
     // We remain in CONNECTING state on boot so the loading snake runs normally,
     // but the rest of the network routines will see this flag when finished.
@@ -597,6 +624,8 @@ void setup() {
         TickType_t lastWakeTime = xTaskGetTickCount();
         while (true) {
 
+          checkAudioTimeout();
+          
           switch(currentState)
           {
             case CONNECTING:

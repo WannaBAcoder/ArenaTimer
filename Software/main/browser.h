@@ -92,6 +92,22 @@ const char* html = R"rawliteral(
             </div>
         </div>
 
+        <div id="audioSection" class="status">
+            <h3>Audio Alerts</h3>
+            <div style="margin-bottom: 10px;">
+                <input type="checkbox" id="audioToggle" onchange="applyAudioSettings()"> 
+                <label for="audioToggle" style="display:inline;">Enable Global Audio</label>
+            </div>
+            <div style="margin-top:15px; border-top: 1px solid #444; padding-top: 10px;">
+                <label style="display:inline; margin-right: 15px;">
+                    <input type="radio" name="outputSelect" value="0" onchange="applyAudioSettings()"> Buzzer (Tone)
+                </label>
+                <label style="display:inline;">
+                    <input type="radio" name="outputSelect" value="1" onchange="applyAudioSettings()"> Relay Pin
+                </label>
+            </div>
+        </div>
+
         <div id="wifiSection" class="status">
             <h3>WiFi Settings</h3>
             <form action="/setwifi" method="POST">
@@ -121,6 +137,13 @@ const char* html = R"rawliteral(
                     if(data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
                     if(data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
                     
+                    // Synchronize Audio Elements
+                    if(data.audioEnabled !== undefined) document.getElementById('audioToggle').checked = data.audioEnabled;
+                    if(data.audioOutput !== undefined) {
+                        let radioBtn = document.querySelector(`input[name="outputSelect"][value="${data.audioOutput}"]`);
+                        if(radioBtn) radioBtn.checked = true;
+                    }
+                    
                     const isClockMode = (data.state === "CLOCK_MODE");
                     document.getElementById('clockToggle').checked = isClockMode;
                     updateControls(isClockMode);
@@ -138,6 +161,13 @@ const char* html = R"rawliteral(
             }
 
             function toggleFlip() { fetch('/flip'); }
+
+            function applyAudioSettings() {
+                const enabled = document.getElementById('audioToggle').checked;
+                const checkedRadio = document.querySelector('input[name="outputSelect"]:checked');
+                const output = checkedRadio ? checkedRadio.value : 0;
+                fetch(`/setaudio?enabled=${enabled}&output=${output}`);
+            }
 
             function toggleClockMode() {
                 const clockToggle = document.getElementById('clockToggle');
@@ -230,7 +260,7 @@ const char* html = R"rawliteral(
 
                         // 2. SETTINGS LOCKOUT (FULL SECTION GRAY OUT)
                         const shouldLockSettings = !isIdle && !isTapout;
-                        const sections = ['systemStatusSection', 'displaySection', 'wifiSection', 'manualTimeSection'];
+                        const sections = ['systemStatusSection', 'displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -240,7 +270,7 @@ const char* html = R"rawliteral(
                         });
 
                         // 3. INDIVIDUAL INPUTS
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -250,6 +280,12 @@ const char* html = R"rawliteral(
                                     el.disabled = shouldLockSettings;
                                 }
                             }
+                        });
+
+                        // Block sub-radios if section is locked down
+                        const radioGroup = document.querySelectorAll('input[name="outputSelect"]');
+                        radioGroup.forEach(radio => {
+                            radio.disabled = shouldLockSettings;
                         });
 
                         if (!isLockingUI) {

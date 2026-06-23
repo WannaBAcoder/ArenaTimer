@@ -67,6 +67,13 @@ extern bool displayInverted;
 extern bool tapoutEnabled; // Track if tapouts are allowed during a match
 extern bool tapoutInitiatorIsBlue;
 
+extern bool audioEnabled;
+extern uint8_t audioOutputSelect; // 0 = Buzzer (Tone), 1 = Relay (Digital Pin)
+
+// Non-blocking beep engine function prototypes
+void triggerBeep(uint32_t durationMs);
+void checkAudioTimeout();
+
 enum timerState {
     CONNECTING,
     IDLE,

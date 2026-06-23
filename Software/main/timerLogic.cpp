@@ -25,6 +25,11 @@ unsigned long lastDebounceTimeTimeSel = 0;
 unsigned long lastDebounceTimeBlue = 0;
 unsigned long lastDebounceTimeRed = 0;
 
+extern bool audioEnabled;
+extern uint8_t audioOutputSelect;
+extern uint32_t beepEndTime;
+extern bool beepActive;
+
 
 bool blinkState = true;
 unsigned long lastBlinkTime = 0;
@@ -150,6 +155,7 @@ void startPreCountdown() {
   scrollIndex = BORDER_LED_COUNT - 1;
   lastScrollTime = millis();
     
+  triggerBeep(150);  
   // Fill border with warning color
   for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, ORANGE);
   
@@ -202,6 +208,8 @@ void handlePreCountdownAnimation() {
         return;
       }
 
+      triggerBeep(150);
+
       if (!displayInverted) {
           setDigit(0, 0, false);
           setDigit(0, 49, false);
@@ -237,6 +245,7 @@ void updateTimer() {
   }
 
   else {
+    triggerBeep(1200);
     currentState = FINISHED;
   }
 }
@@ -249,6 +258,8 @@ void transitionToMatch() {
   }
 
   lastCountdownTime = millis();
+
+  triggerBeep(1000);
   
   setBorder(); 
   updateLEDs();
@@ -275,6 +286,10 @@ void processCommand(String cmd) {
   }
   else if (cmd == "pause" && currentState == RUNNING) { 
     currentState = PAUSED; 
+
+    lastBlinkTime = 0; 
+
+    triggerBeep(300);
     updateClient();
     updateLEDs();
   } 
@@ -447,4 +462,27 @@ void handleTapoutAnimation() {
       scrollPos = 0; 
     }
   }
+}
+
+void triggerBeep(uint32_t durationMs) {
+    if (!audioEnabled || beepActive) return;
+
+    beepEndTime = millis() + durationMs;
+    beepActive = true;
+
+    if (audioOutputSelect == 0) {
+        tone(BUZZ_PIN, 2000); // Fire active frequency sweep on Buzzer pin
+    } else {
+        digitalWrite(RELAY_PIN, HIGH); // Pull Relay active
+    }
+}
+
+void checkAudioTimeout() {
+    if (!beepActive) return;
+
+    if (millis() >= beepEndTime) {
+        noTone(BUZZ_PIN);
+        digitalWrite(RELAY_PIN, LOW);
+        beepActive = false;
+    }
 }
