@@ -464,13 +464,19 @@ void handleTapoutAnimation() {
 }
 
 void triggerBeep(uint32_t durationMs) {
-    if (!audioEnabled || beepActive) return;
+    if (!audioEnabled) return;
 
+    // Calculate the new target end time
     beepEndTime = millis() + durationMs;
+
+    // If it's already running, just update the time and exit 
+    // (avoids re-triggering the tone or clicking the relay)
+    if (beepActive) return; 
+
     beepActive = true;
 
     if (audioOutputSelect == 0) {
-        tone(BUZZ_PIN, 2000); // Fire active frequency sweep on Buzzer pin
+        tone(BUZZ_PIN, 2000); // Fire active frequency on Buzzer pin
     } else {
         digitalWrite(RELAY_PIN, HIGH); // Pull Relay active
     }

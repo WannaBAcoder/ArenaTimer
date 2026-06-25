@@ -61,11 +61,14 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   memcpy(&incoming, data, sizeof(incoming)); //
   uint8_t* mac = info->src_addr; //
 
-  static unsigned long lastPacketTime = 0; //
-  if (millis() - lastPacketTime < 300) return; //
-  lastPacketTime = millis(); //
+  // If it's a buzzer hold packet, we BYPASS the 300ms cooldown so we track the stream.
+  static unsigned long lastPacketTime = 0;
+  if (incoming.buttonID != 5) { 
+      if (millis() - lastPacketTime < 300) return;
+      lastPacketTime = millis();
+      Serial.printf("[ESP-NOW] Role: %s | Button: %d\n", incoming.deviceType, incoming.buttonID);
+  }
 
-  Serial.printf("[ESP-NOW] Role: %s | Button: %d\n", incoming.deviceType, incoming.buttonID); //
 
   if (pairingMode) { //
       saveRole(mac, String(incoming.deviceType)); //
@@ -90,10 +93,11 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   }
   else if (strcmp(incoming.deviceType, "Judge") == 0) { //
     switch(incoming.buttonID) { //
-        case 1: processCommand("start");   break; //
-        case 2: processCommand("pause");   break; //
-        case 3: processCommand("reset");   break; //
-        case 4: processCommand("switch");  break; //
+        case 1: processCommand("start");   break; 
+        case 2: processCommand("pause");   break; 
+        case 3: processCommand("reset");   break; 
+        case 4: processCommand("switch");  break; 
+        case 5: triggerBeep(250); break;
     }
   }
 }
