@@ -87,6 +87,22 @@ enum timerState {
     TAPOUT
 };
 
+extern bool slaveModeEnabled;
+
+typedef struct master_sync_message {
+    uint8_t packetType;       // 0xAA = Master Sync Packet
+    uint8_t systemState;      // Current timerState enum (RUNNING, PAUSED, IDLE, etc.)
+    int current_time;         // Real-time remaining seconds
+    uint32_t digitColorHex;   // 24-bit Hex color representation (e.g., 0xFF0000)
+    uint8_t brightness;       // System brightness value (10 - 230)
+    bool displayInverted;     // Orientation layout state
+    bool audioEnabled;        // Global sound toggle
+    bool remoteAudioEnabled;  // Remote buzzer allowance filter
+    bool tapoutInitiatorIsBlue; // Active team identifier during tapouts
+} __attribute__((packed)) master_sync_message;
+
+void broadcastMasterSync();
+
 extern int currentState;
 
 // Function prototypes for functions defined in other modules

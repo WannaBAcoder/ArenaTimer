@@ -241,6 +241,8 @@ void updateTimer() {
       
       updateClient();  // Reset to 2:00 (or 3:00)
       updateLEDs();
+
+      broadcastMasterSync();
     }
   }
 
@@ -347,6 +349,8 @@ void processCommand(String cmd) {
     updateClient();
     FastLED.show();
   }
+
+  broadcastMasterSync();
 }
 
 void setTeamReady(String team) {

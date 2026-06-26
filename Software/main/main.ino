@@ -58,7 +58,38 @@ bool beepActive = false;
 CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
 
+bool slaveModeEnabled = false;
+
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
+  if (slaveModeEnabled) {
+      if (len == sizeof(master_sync_message) && data[0] == 0xAA) {
+          master_sync_message msg;
+          memcpy(&msg, data, sizeof(msg));
+
+          // Force Real-time Variables instantly
+          current_time = msg.current_time;
+          currentState = msg.systemState;
+          tapoutInitiatorIsBlue = msg.tapoutInitiatorIsBlue;
+
+          // Check and update cosmetic configurations
+          if (systemBrightness != msg.brightness) {
+              systemBrightness = msg.brightness;
+              FastLED.setBrightness(systemBrightness);
+          }
+          if (digitColor != CRGB(msg.digitColorHex)) {
+              digitColor = CRGB(msg.digitColorHex);
+              updateLEDs();
+          }
+          
+          displayInverted = msg.displayInverted;
+          audioEnabled = msg.audioEnabled;
+          remoteAudioEnabled = msg.remoteAudioEnabled;
+
+          needsLEDUpdate = true;
+      }
+      return; // Absolute lockout: Salves ignore regular remote packets completely
+  }
+ 
   memcpy(&incoming, data, sizeof(incoming)); //
   uint8_t* mac = info->src_addr; //
 
@@ -178,7 +209,8 @@ void initNetwork() {
       json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
       json += "\"brightness\":" + String(systemBrightness) + ",";
       json += "\"displayInverted\":" + String(displayInverted ? "true" : "false") + ",";
-      
+      json += "\"slaveModeEnabled\":" + String(slaveModeEnabled ? "true" : "false") + ",";
+
       char hexColor[7];
       snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);
       json += "\"digitColor\":\"" + String(hexColor) + "\",";
@@ -340,6 +372,17 @@ void handleControl() {
         
         Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED"); //
     } 
+
+    else if (cmd == "slavetoggle") {
+        String state = server.arg("state");
+        slaveModeEnabled = (state == "on");
+
+        preferences.begin("settings", false);
+        preferences.putBool("slaveMode", slaveModeEnabled);
+        preferences.end();
+
+        Serial.printf("[SYSTEM] Passive Slave configuration updated: %s\n", slaveModeEnabled ? "ACTIVE" : "OFF");
+    }
     else {
         processCommand(cmd); //
     }
@@ -363,6 +406,8 @@ void handleSetTime() {
     
     updateClient();
     updateLEDs();
+
+    broadcastMasterSync();
     
     server.send(200, "text/plain", "Time Updated");
 }
@@ -587,6 +632,8 @@ void loadSavedSettings() {
     audioEnabled = preferences.getBool("audioEnabled", true);
     remoteAudioEnabled = preferences.getBool("remoteAudio", true);
     audioOutputSelect = preferences.getUChar("audioOutput", 0);
+
+    slaveModeEnabled = preferences.getBool("slaveMode", false);
     
     // We remain in CONNECTING state on boot so the loading snake runs normally,
     // but the rest of the network routines will see this flag when finished.
@@ -701,5 +748,27 @@ void setup() {
 void loop() {
   server.handleClient();
   webSocket.loop();
+}
+
+void broadcastMasterSync() {
+    // Slaves never broadcast tracking commands
+    if (slaveModeEnabled) return;
+
+    master_sync_message msg;
+    msg.packetType = 0xAA;
+    msg.systemState = currentState;
+    msg.current_time = current_time;
+    msg.brightness = systemBrightness;
+    msg.displayInverted = displayInverted;
+    msg.audioEnabled = audioEnabled;
+    msg.remoteAudioEnabled = remoteAudioEnabled;
+    msg.tapoutInitiatorIsBlue = tapoutInitiatorIsBlue;
+
+    // Package 24-bit color string hex back to uint32 bitmask
+    uint32_t hexColor = ((uint32_t)digitColor.r << 16) | ((uint32_t)digitColor.g << 8) | digitColor.b;
+    msg.digitColorHex = hexColor;
+
+    uint8_t broadcastMAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    esp_now_send(broadcastMAC, (uint8_t *)&msg, sizeof(msg));
 }
 
