@@ -49,6 +49,7 @@ bool tapoutEnabled = true;
 bool tapoutInitiatorIsBlue = true;
 
 bool audioEnabled = true;
+bool remoteAudioEnabled = true;
 uint8_t audioOutputSelect = 0; // 0 = Buzzer, 1 = Relay
 uint32_t beepEndTime = 0;
 bool beepActive = false;
@@ -97,7 +98,11 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
         case 2: processCommand("pause");   break; 
         case 3: processCommand("reset");   break; 
         case 4: processCommand("switch");  break; 
-        case 5: triggerBeep(250); break;
+        case 5: 
+            if (audioEnabled && remoteAudioEnabled) {
+                triggerBeep(250); 
+            }
+            break;
     }
   }
 }
@@ -152,8 +157,9 @@ void initNetwork() {
       String json = "{";
       json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
       json += "\"readyRequired\":" + String(readyRequired ? "true" : "false") + ",";
-      json += "\"tapoutEnabled\":" + String(tapoutEnabled ? "true" : "false") + ","; // Existing
+      json += "\"tapoutEnabled\":" + String(tapoutEnabled ? "true" : "false") + ",";
       json += "\"audioEnabled\":" + String(audioEnabled ? "true" : "false") + ",";
+      json += "\"remoteAudioEnabled\":" + String(remoteAudioEnabled ? "true" : "false") + ",";
       json += "\"audioOutput\":" + String(audioOutputSelect) + ",";
         
       json += "\"state\":\"";
@@ -279,10 +285,12 @@ void initNetwork() {
         }
         
         if (server.hasArg("enabled")) audioEnabled = (server.arg("enabled") == "true");
+        if (server.hasArg("remoteEnabled")) remoteAudioEnabled = (server.arg("remoteEnabled") == "true");
         if (server.hasArg("output")) audioOutputSelect = server.arg("output").toInt();
 
         preferences.begin("settings", false);
         preferences.putBool("audioEnabled", audioEnabled);
+        preferences.putBool("remoteAudio", remoteAudioEnabled);
         preferences.putUChar("audioOutput", audioOutputSelect);
         preferences.end();
 
@@ -577,6 +585,7 @@ void loadSavedSettings() {
     tapoutEnabled = preferences.getBool("tapoutEnabled", true); 
 
     audioEnabled = preferences.getBool("audioEnabled", true);
+    remoteAudioEnabled = preferences.getBool("remoteAudio", true);
     audioOutputSelect = preferences.getUChar("audioOutput", 0);
     
     // We remain in CONNECTING state on boot so the loading snake runs normally,

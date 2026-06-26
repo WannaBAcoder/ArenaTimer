@@ -68,6 +68,7 @@ extern bool tapoutEnabled; // Track if tapouts are allowed during a match
 extern bool tapoutInitiatorIsBlue;
 
 extern bool audioEnabled;
+extern bool remoteAudioEnabled;
 extern uint8_t audioOutputSelect; // 0 = Buzzer (Tone), 1 = Relay (Digital Pin)
 
 // Non-blocking beep engine function prototypes

@@ -98,6 +98,10 @@ const char* html = R"rawliteral(
                 <input type="checkbox" id="audioToggle" onchange="applyAudioSettings()"> 
                 <label for="audioToggle" style="display:inline;">Enable Global Audio</label>
             </div>
+            <div style="margin-bottom: 10px;">
+                <input type="checkbox" id="remoteAudioToggle" onchange="applyAudioSettings()"> 
+                <label for="remoteAudioToggle" style="display:inline;">Enable Remote Audio</label>
+            </div>
             <div style="margin-top:15px; border-top: 1px solid #444; padding-top: 10px;">
                 <label style="display:inline; margin-right: 15px;">
                     <input type="radio" name="outputSelect" value="0" onchange="applyAudioSettings()"> Buzzer (Tone)
@@ -139,6 +143,7 @@ const char* html = R"rawliteral(
                     
                     // Synchronize Audio Elements
                     if(data.audioEnabled !== undefined) document.getElementById('audioToggle').checked = data.audioEnabled;
+                    if(data.remoteAudioEnabled !== undefined) document.getElementById('remoteAudioToggle').checked = data.remoteAudioEnabled;
                     if(data.audioOutput !== undefined) {
                         let radioBtn = document.querySelector(`input[name="outputSelect"][value="${data.audioOutput}"]`);
                         if(radioBtn) radioBtn.checked = true;
@@ -164,9 +169,10 @@ const char* html = R"rawliteral(
 
             function applyAudioSettings() {
                 const enabled = document.getElementById('audioToggle').checked;
+                const remoteEnabled = document.getElementById('remoteAudioToggle').checked;
                 const checkedRadio = document.querySelector('input[name="outputSelect"]:checked');
                 const output = checkedRadio ? checkedRadio.value : 0;
-                fetch(`/setaudio?enabled=${enabled}&output=${output}`);
+                fetch(`/setaudio?enabled=${enabled}&remoteEnabled=${remoteEnabled}&output=${output}`);
             }
 
             function toggleClockMode() {
@@ -270,7 +276,7 @@ const char* html = R"rawliteral(
                         });
 
                         // 3. INDIVIDUAL INPUTS
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -295,6 +301,7 @@ const char* html = R"rawliteral(
 
                             if (data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
                             if (data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
+                            if (data.remoteAudioEnabled !== undefined) document.getElementById('remoteAudioToggle').checked = data.remoteAudioEnabled;
                         }
                     })
                     .catch(e => console.error(e));
