@@ -374,7 +374,7 @@ void handleClockMode() {
   
   // Throttle to update exactly once per second unless an immediate refresh is requested
   if (millis() - lastClockUpdate < 1000 && !needsLEDUpdate) return; //
-  lastClockUpdate = millis(); //
+  lastClockUpdate = millis();
 
   struct tm timeinfo; //
   // We know this will succeed because checkWiFiConnection() gates entry behind it!

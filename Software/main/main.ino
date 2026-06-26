@@ -38,7 +38,6 @@ int countdown = 3; //number of seconds until match start
 int scrollIndex = 0;
 unsigned long lastScrollTime = 0;
 volatile bool needsLEDUpdate = false;
-
 unsigned long startAttemptTime = 0;
 
 int currentState = CONNECTING;
@@ -59,6 +58,8 @@ CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
 
 bool slaveModeEnabled = false;
+
+TaskHandle_t TimerTaskHandle = NULL;
 
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   if (slaveModeEnabled) {
@@ -265,30 +266,59 @@ void initNetwork() {
     });
 
     server.on("/synctime", []() {
-      if (currentState != IDLE && currentState != CLOCK_MODE) {
-          server.send(403, "text/plain", "Timer is active!");
-          return;
-      }
-      int h = server.arg("h").toInt();
-      int m = server.arg("m").toInt();
-      int s = server.arg("s").toInt();
+        if (currentState != IDLE && currentState != CLOCK_MODE) {
+            server.send(403, "text/plain", "Timer is active!");
+            return;
+        }
+        int hour = server.arg("h").toInt();
+        int minute = server.arg("m").toInt();
+        int s = server.arg("s").toInt();
 
-      struct tm tm;
-      tm.tm_hour = h; tm.tm_min = m; tm.tm_sec = s;
-      tm.tm_year = 2026 - 1900; tm.tm_mon = 4; tm.tm_mday = 10;
-      time_t t = mktime(&tm);
-      struct timeval now = { .tv_sec = t };
-      settimeofday(&now, NULL);
-      
-      currentState = CLOCK_MODE;
+        struct tm tm;
+        tm.tm_hour = hour; tm.tm_min = minute; tm.tm_sec = s;
+        tm.tm_year = 2026 - 1900; tm.tm_mon = 4; tm.tm_mday = 10;
+        time_t t = mktime(&tm);
+        struct timeval now = { .tv_sec = t };
+        settimeofday(&now, NULL);
+        
+        if (TimerTaskHandle != NULL) vTaskSuspend(TimerTaskHandle);
+        currentState = CLOCK_MODE;
 
-      // Save Clock Mode Active flag to flash
-      preferences.begin("settings", false);
-      preferences.putBool("clockActive", true);
-      preferences.end();
+        // Save Clock Mode Active flag to flash
+        preferences.begin("settings", false);
+        preferences.putBool("clockActive", true);
+        preferences.end();
 
-      setBorder();
-      server.send(200, "text/plain", "Clock Seeded");
+        for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
+        for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
+
+        if (hour == 0) hour = 12;
+        if (hour > 12) hour -= 12;
+
+        if (!displayInverted) {
+            setDigit(hour / 10, 0, false);
+            setDigit(hour % 10, 49, false);
+            setColon();
+            setDigit(minute / 10, 150, true);
+            setDigit(minute % 10, 101, true);
+        } else {
+            setDigit(minute % 10, 0, false);
+            setDigit(minute / 10, 49, false);
+            setColon();
+            setDigit(hour % 10, 150, true);
+            setDigit(hour / 10, 101, true);
+        }
+
+    //clear the border 
+    for (int i = 0; i < BORDER_LED_COUNT; i++)
+        setBorderLEDs(i, ORANGE); 
+
+        FastLED.show();
+        needsLEDUpdate = false;
+
+        if (TimerTaskHandle != NULL) vTaskResume(TimerTaskHandle);
+
+        server.send(200, "text/plain", "Clock Seeded");
     });
 
     server.on("/flip", []() {
@@ -462,6 +492,7 @@ void checkWiFiConnection() {
     if (currentState != CONNECTING) return;
 
     bool connectionFinished = false;
+    bool connectionFailed = false; // <-- Track if we dropped to AP mode
 
     if (WiFi.status() == WL_CONNECTED) {
         static bool serversStarted = false;
@@ -476,88 +507,19 @@ void checkWiFiConnection() {
             Serial.print("[NETWORK] Local IP Address: http://");
             Serial.println(WiFi.localIP());
 
-            // --- FULL DYNAMIC AUTOMATIC POSIX TIMEZONE DETECTION ---
-            HTTPClient http;
-            // Fetching raw key-value pair text definitions directly from WorldTimeAPI
-            http.begin("http://worldtimeapi.org/api/ip.txt");
-            int httpCode = http.GET();
-            String posixString = "";
-            
-            if (httpCode == HTTP_CODE_OK) {
-                String payload = http.getString();
-                // Find the line that looks like: "abbreviation: CDT" or "abbreviation: CST"
-                // WorldTimeAPI text responses explicitly bundle full POSIX strings in the "abbreviation" keys
-                int abbrevIdx = payload.indexOf("abbreviation: ");
-                
-                // Let's grab the precise IANA timezone identifier block as a reliable alternate if needed,
-                // but the cleanest automatic method is using their key value formatting.
-                // To keep it light, we can use their pre-formatted client target:
-                // Let's grab the raw offset definition line if text parsing falls out:
-                int tzOffsetIdx = payload.indexOf("utc_offset: ");
-                if (tzOffsetIdx != -1) {
-                    int startOffset = tzOffsetIdx + 12;
-                    int endOffset = payload.indexOf('\n', startOffset);
-                    String rawOffset = payload.substring(startOffset, endOffset);
-                    rawOffset.trim(); // E.g., "-05:00"
-                    
-                    // Parse standard offsets directly into a POSIX format the ESP32 can digest instantly:
-                    // Note: POSIX rules invert signs (+ is West of GMT, - is East).
-                    int hoursOffset = rawOffset.substring(1, 3).toInt();
-                    char sign = rawOffset.charAt(0);
-                    
-                    if (sign == '-') {
-                        posixString = "GMT" + String(hoursOffset);
-                    } else {
-                        posixString = "GMT-" + String(hoursOffset);
-                    }
-                    
-                    // Account for standard US daylight saving rules automatically if in North America
-                    if (payload.indexOf("America/") != -1) {
-                        // Dynamically append seasonal transition offsets for US regions
-                        int dstOffset = hoursOffset - 1;
-                        posixString += "GMT+" + String(dstOffset) + ",M3.2.0,M11.1.0";
-                    }
-                }
-            }
-            http.end();
+            configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+            setenv("TZ", "CST6CDT,M3.2.0,M11.1.0", 1);
+            tzset();
 
-            if (posixString.length() > 0) {
-                Serial.printf("[NETWORK] Dynamic POSIX Timezone Generated: %s\n", posixString.c_str());
-                configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-                setenv("TZ", posixString.c_str(), 1);
-                tzset();
-            } else {
-                Serial.println("[NETWORK] Dynamic detection timed out. Defaulting to Central Time rule safely.");
-                configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-                setenv("TZ", "CST6CDT,M3.2.0,M11.1.0", 1);
-                tzset();
-            }
             serversStarted = true;
         }
 
-        preferences.begin("settings", true);
-        bool clockActive = preferences.getBool("clockActive", false);
-        preferences.end();
-
-        if (clockActive) {
-            struct tm timeinfo;
-            if (getLocalTime(&timeinfo)) {
-                Serial.println("[NETWORK] Time successfully synced from NTP server!");
-                connectionFinished = true;
-            } else {
-                static unsigned long lastLog = 0;
-                if (millis() - lastLog > 2000) {
-                    Serial.println("[NETWORK] Gating startup: Awaiting real-world NTP seed calibration...");
-                    lastLog = millis();
-                }
-            }
-        } else {
-            connectionFinished = true;
-        }
+        connectionFinished = true;
     } 
     else if (millis() - startAttemptTime > 30000) {
         startAPMode();
         connectionFinished = true;
+        connectionFailed = true; // <-- Mark that we are offline in AP mode!
     }
 
     if (connectionFinished) {
@@ -565,28 +527,91 @@ void checkWiFiConnection() {
         bool clockActive = preferences.getBool("clockActive", false);
         preferences.end();
 
-        if (clockActive) {
-            currentState = CLOCK_MODE;
-            Serial.println("[PERSISTENCE] Clock fully synchronized. Booting straight to Clock Mode display!");
+        // Drop into standard match IDLE state first as our baseline landing
+        currentState = IDLE;
+        setBorder();
+        updateClient();
+        FastLED.show();
+
+        // SAFETY GATE: Only try to load clock mode if the connection actually SUCCEEDED
+        if (clockActive && !connectionFailed) {
+            Serial.println("[NETWORK] Saved Clock Mode detected. Queuing background calibration...");
             
-            // 1. Immediately wipe the residual snake frames out of RAM
-            for (int i = 0; i < BORDER_LED_COUNT; i++) {
-                setBorderLEDs(i, CRGB::Black);
-            }
-            for (int i = 0; i < DIGIT_LED_COUNT; i++) {
-                setDigitLEDs(i, CRGB::Black);
-            }
-            FastLED.show();
+            xTaskCreate(
+                [](void*) {
+                    vTaskDelay(pdMS_TO_TICKS(500)); 
 
-            handleClockMode();
-            setBorder();
-            FastLED.show(); 
+                    Serial.println("[ASYNC TZ] Performing web timezone detection...");
+                    HTTPClient http;
+                    http.setTimeout(4000); 
+                    http.begin("http://worldtimeapi.org/api/ip.txt");
+                    
+                    int httpCode = http.GET();
+                    String posixString = "";
+                    
+                    if (httpCode == HTTP_CODE_OK) {
+                        String payload = http.getString();
+                        int tzOffsetIdx = payload.indexOf("utc_offset: ");
+                        if (tzOffsetIdx != -1) {
+                            int startOffset = tzOffsetIdx + 12;
+                            int endOffset = payload.indexOf('\n', startOffset);
+                            String rawOffset = payload.substring(startOffset, endOffset);
+                            rawOffset.trim();
+                            
+                            int hoursOffset = rawOffset.substring(1, 3).toInt();
+                            char sign = rawOffset.charAt(0);
+                            
+                            if (sign == '-') {
+                                posixString = "GMT" + String(hoursOffset);
+                            } else {
+                                posixString = "GMT-" + String(hoursOffset);
+                            }
+                            
+                            if (payload.indexOf("America/") != -1) {
+                                int dstOffset = hoursOffset - 1;
+                                posixString += "GMT+" + String(dstOffset) + ",M3.2.0,M11.1.0";
+                            }
+                        }
+                    }
+                    http.end();
 
-        } else {
-            currentState = IDLE;
-            setBorder();
-            updateClient();
-            FastLED.show(); 
+                    if (posixString.length() > 0) {
+                        Serial.printf("[ASYNC TZ] Found matching region rule: %s\n", posixString.c_str());
+                        setenv("TZ", posixString.c_str(), 1);
+                        tzset();
+                    } else {
+                        Serial.println("[ASYNC TZ] Network timeout. Staying with Central Time rule.");
+                    }
+
+                    struct tm timeinfo;
+                    unsigned long startWait = millis();
+                    while (!getLocalTime(&timeinfo) && (millis() - startWait < 8000)) {
+                        vTaskDelay(pdMS_TO_TICKS(500));
+                    }
+
+                    if (TimerTaskHandle != NULL) vTaskSuspend(TimerTaskHandle);
+                    
+                    currentState = CLOCK_MODE;
+                    
+                    for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
+                    for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
+                    
+                    handleClockMode();
+                    setBorder();
+                    
+                    FastLED.show();
+                    needsLEDUpdate = false;
+                    
+                    if (TimerTaskHandle != NULL) vTaskResume(TimerTaskHandle);
+                    Serial.println("[SYSTEM] Seamless boot transition to Clock Mode complete.");
+
+                    vTaskDelete(NULL); 
+                }, "BootClockTransitionTask", 4096, nullptr, 1, nullptr
+            );
+        } 
+        else if (connectionFailed) {
+            Serial.println("[SYSTEM WARNING] WiFi Connection failed! Gating in IDLE mode on Access Point hotspot.");
+            // Optional: You can change the border color here to indicate AP mode error state (e.g., solid Red or flashing)
         }
     }
 }
@@ -730,7 +755,7 @@ void setup() {
           }
           vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(1));
         }
-    },"TimerTask",4096, nullptr, 1,nullptr
+    },"TimerTask",4096, nullptr, 1, &TimerTaskHandle
   );
 
   // 2. Button Polling Task

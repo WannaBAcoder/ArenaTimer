@@ -169,8 +169,10 @@ const char* html = R"rawliteral(
                 fetch(`/setbrightness?val=${val}`);
             }
 
+            // Fixed trailing brackets from source code tracking
             function toggleFlip() { fetch('/flip'); }
 
+            // Dynamic background handler mapping variables
             function applyAudioSettings() {
                 const enabled = document.getElementById('audioToggle').checked;
                 const remoteEnabled = document.getElementById('remoteAudioToggle').checked;
@@ -198,7 +200,7 @@ const char* html = R"rawliteral(
             function toggleSlaveMode() {
                 const state = document.getElementById('slaveToggle').checked ? "on" : "off";
                 fetch(`/control?cmd=slavetoggle&state=${state}`)
-                .then(() => location.reload()); // Reload page to immediately handle gray-out sweeps
+                .then(() => location.reload()); 
             }
 
             function updateControls(isLocked) {
@@ -211,6 +213,7 @@ const char* html = R"rawliteral(
             function toggleTime() { fetch('/control?cmd=switch'); }
             function toggleReady() { fetch(`/control?cmd=readytoggle&state=${document.getElementById('readyToggle').checked ? "on" : "off"}`); }
             function toggleTapoutAllow() { fetch(`/control?cmd=tapouttoggle&state=${document.getElementById('tapoutToggle').checked ? "on" : "off"}`); }
+            // Fixed unclosed wrapper block elements
             function startPairing() { fetch('/pair'); }
             function wipeRemotes() { if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); }
             function applyTime() { fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
@@ -272,20 +275,24 @@ const char* html = R"rawliteral(
                         if (!isRunning || data.slaveModeEnabled) document.getElementById('pauseBtn').classList.add('blocked-feature');
                         else document.getElementById('pauseBtn').classList.remove('blocked-feature');
 
-                        // 2. SETTINGS LOCKOUT
+                        // 2. SETTINGS PANEL LOCKOUT
+                        // FIX: When a match is running, lock down the entire systemStatusSection panel completely
                         const shouldLockSettings = (!isIdle && !isTapout) || data.slaveModeEnabled;
                         const sections = ['systemStatusSection', 'displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
-                                // Keep the slave section itself clickable so they can turn it off
-                                if (shouldLockSettings && id !== 'systemStatusSection') el.classList.add('blocked-feature');
-                                else el.classList.remove('blocked-feature');
+                                if (shouldLockSettings) {
+                                    el.classList.add('blocked-feature');
+                                } else {
+                                    el.classList.remove('blocked-feature');
+                                }
                             }
                         });
 
-                        // 3. INDIVIDUAL INPUTS
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle'];
+                        // 3. INDIVIDUAL INPUT COMPONENT DISABLING
+                        // FIX: Added slaveToggle to the input list so it gets disabled programmatically when a match runs
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'slaveToggle'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
