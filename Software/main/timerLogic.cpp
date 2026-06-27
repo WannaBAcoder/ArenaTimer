@@ -34,6 +34,8 @@ bool blinkState = true;
 unsigned long lastBlinkTime = 0;
 const unsigned long blinkInterval = 500; // Blink every 500ms
 
+extern TaskHandle_t TimerTaskHandle;
+
 void handleConnectingAnimation() {
   static uint8_t head = 0;
   static unsigned long lastAnimTime = 0;
@@ -220,8 +222,21 @@ void updateTimer() {
     }
   }
   else {
-    triggerBeep(1200);
     currentState = FINISHED;
+    triggerBeep(1200);
+    current_time = 0;
+
+    for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
+    for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
+    
+    updateLEDs();
+
+    for (int i = 0; i < BORDER_LED_COUNT; i++) {
+      setBorderLEDs(i, CRGB::Green);
+    }
+
+    FastLED.show();
+    needsLEDUpdate = false;
   }
 }
 

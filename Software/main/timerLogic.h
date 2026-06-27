@@ -14,6 +14,7 @@ void handlePausedBlink();
 void handleClockMode();
 void handleConnectingAnimation();
 void handleTapoutAnimation();
+void handleFinishedState();
 
 // General logic
 void processCommand(String cmd);
