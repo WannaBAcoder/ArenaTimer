@@ -169,10 +169,8 @@ const char* html = R"rawliteral(
                 fetch(`/setbrightness?val=${val}`);
             }
 
-            // Fixed trailing brackets from source code tracking
             function toggleFlip() { fetch('/flip'); }
 
-            // Dynamic background handler mapping variables
             function applyAudioSettings() {
                 const enabled = document.getElementById('audioToggle').checked;
                 const remoteEnabled = document.getElementById('remoteAudioToggle').checked;
@@ -213,7 +211,6 @@ const char* html = R"rawliteral(
             function toggleTime() { fetch('/control?cmd=switch'); }
             function toggleReady() { fetch(`/control?cmd=readytoggle&state=${document.getElementById('readyToggle').checked ? "on" : "off"}`); }
             function toggleTapoutAllow() { fetch(`/control?cmd=tapouttoggle&state=${document.getElementById('tapoutToggle').checked ? "on" : "off"}`); }
-            // Fixed unclosed wrapper block elements
             function startPairing() { fetch('/pair'); }
             function wipeRemotes() { if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); }
             function applyTime() { fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
@@ -276,23 +273,25 @@ const char* html = R"rawliteral(
                         else document.getElementById('pauseBtn').classList.remove('blocked-feature');
 
                         // 2. SETTINGS PANEL LOCKOUT
-                        // FIX: When a match is running, lock down the entire systemStatusSection panel completely
-                        const shouldLockSettings = (!isIdle && !isTapout) || data.slaveModeEnabled;
-                        const sections = ['systemStatusSection', 'displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
+                        const isMatchActive = (!isIdle && !isTapout);
+                        const shouldLockSettings = isMatchActive || data.slaveModeEnabled;
+                        
+                        const sections = ['displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
-                            if (el) {
-                                if (shouldLockSettings) {
-                                    el.classList.add('blocked-feature');
-                                } else {
-                                    el.classList.remove('blocked-feature');
-                                }
-                            }
+                            if (el && shouldLockSettings) el.classList.add('blocked-feature');
+                            else if (el) el.classList.remove('blocked-feature');
                         });
 
+                        // Keep the status panel visual wrapper un-grayed in passive slave mode so the checkbox stays clean
+                        const statusSection = document.getElementById('systemStatusSection');
+                        if (statusSection) {
+                            if (isMatchActive) statusSection.classList.add('blocked-feature');
+                            else statusSection.classList.remove('blocked-feature');
+                        }
+
                         // 3. INDIVIDUAL INPUT COMPONENT DISABLING
-                        // FIX: Added slaveToggle to the input list so it gets disabled programmatically when a match runs
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'slaveToggle'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -303,6 +302,12 @@ const char* html = R"rawliteral(
                                 }
                             }
                         });
+
+                        // Explicitly handle slave toggle fallback constraint separately
+                        const slaveToggleEl = document.getElementById('slaveToggle');
+                        if (slaveToggleEl) {
+                            slaveToggleEl.disabled = isMatchActive; 
+                        }
 
                         const radioGroup = document.querySelectorAll('input[name="outputSelect"]');
                         radioGroup.forEach(radio => { radio.disabled = shouldLockSettings; });
