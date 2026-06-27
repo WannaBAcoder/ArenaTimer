@@ -30,13 +30,11 @@ extern uint8_t audioOutputSelect;
 extern uint32_t beepEndTime;
 extern bool beepActive;
 
-
 bool blinkState = true;
 unsigned long lastBlinkTime = 0;
 const unsigned long blinkInterval = 500; // Blink every 500ms
 
 void handleConnectingAnimation() {
-
   static uint8_t head = 0;
   static unsigned long lastAnimTime = 0;
   const uint8_t animSpeed = 30; // Milliseconds per frame
@@ -45,17 +43,14 @@ void handleConnectingAnimation() {
   if (millis() - lastAnimTime >= animSpeed) {
     lastAnimTime = millis();
 
-    // Clear the border
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       setBorderLEDs(i, CRGB::Black);
     }
 
-    // Draw the "snake"
     for (int i = 0; i < tailLength; i++) {
       int pos = (head - i + BORDER_LED_COUNT) % BORDER_LED_COUNT;
-      // Fade the tail
       uint8_t brightness = map(i, 0, tailLength, 255, 0);
-      setBorderLEDs(pos, ORANGE.fadeToBlackBy(255 - brightness)); // Cyan snake
+      setBorderLEDs(pos, ORANGE.fadeToBlackBy(255 - brightness)); 
     }
 
     head = (head + 1) % BORDER_LED_COUNT;
@@ -64,66 +59,57 @@ void handleConnectingAnimation() {
 }
 
 void checkButtons() {
-  if (Serial.available() > 0) { //
-    char rc = Serial.read(); //
+  if (Serial.available() > 0) { 
+    char rc = Serial.read(); 
     
-    // Quick sanitization to ignore trailing newline/carriage return characters
     if (rc == '\n' || rc == '\r') return;
 
     switch (rc) {
-      case 's': // START MATCH
+      case 's': 
         Serial.println("[SERIAL CONTROL] Start Pressed");
         processCommand("start");
         break;
-
-      case 'p': // PAUSE MATCH
+      case 'p': 
         Serial.println("[SERIAL CONTROL] Pause Pressed");
         processCommand("pause");
         break;
-
-      case 'x': // RESET MATCH
+      case 'x': 
         Serial.println("[SERIAL CONTROL] Reset Pressed");
         processCommand("reset");
         break;
-
-      case 't': // TOGGLE TIME (Switch 2m/3m)
+      case 't': 
         Serial.println("[SERIAL CONTROL] Time Selection Toggle Pressed");
         processCommand("switch");
         break;
-
-      case 'r': // RED DRIVER INTERACTION
-        Serial.println("[SERIAL TEST] Red Button Pressed"); //
-        if (currentState == RUNNING) { //
+      case 'r': 
+        Serial.println("[SERIAL TEST] Red Button Pressed"); 
+        if (currentState == RUNNING) { 
             processCommand("tapoutRed");
-        } else if (readyRequired) { //
-            setTeamReady("Red"); //
+        } else if (readyRequired) { 
+            setTeamReady("Red"); 
         }
         break;
-
-      case '1': // beep
-        Serial.println("[SERIAL TEST] Buzzer toggle"); //
+      case '1': 
+        Serial.println("[SERIAL TEST] Buzzer toggle"); 
         buzzState = !buzzState;
         if(buzzState)
           tone(BUZZ_PIN, 2000);
         else
           noTone(BUZZ_PIN);
       break;
-
-      case '2': // relay
-        Serial.println("[SERIAL TEST] Relay toggle"); //
+      case '2': 
+        Serial.println("[SERIAL TEST] Relay toggle"); 
         relayState = !relayState;
         digitalWrite(RELAY_PIN, relayState);
       break;
-
-      case 'b': // BLUE DRIVER INTERACTION
-        Serial.println("[SERIAL TEST] Blue Button Pressed"); //
-        if (currentState == RUNNING) { //
+      case 'b': 
+        Serial.println("[SERIAL TEST] Blue Button Pressed"); 
+        if (currentState == RUNNING) { 
             processCommand("tapoutBlue");
-        } else if (readyRequired) { //
-            setTeamReady("Blue"); //
+        } else if (readyRequired) { 
+            setTeamReady("Blue"); 
         }
         break;
-
       default:
         Serial.printf("[SERIAL ALERT] Unknown hotkey instruction: '%c'\n", rc);
         break;
@@ -139,15 +125,14 @@ void handlePausedBlink() {
     blinkState = !blinkState;
     
     if (blinkState) {
-        updateLEDs(); // Redraws the digits based on current_time
+        updateLEDs(); 
     } else {
-      // Clear only the digit LEDs (0 to 201)
       for (int i = 0; i < DIGIT_LED_COUNT; i++) {
           setDigitLEDs(i, CRGB::Black);
       }
     }
   }
-  needsLEDUpdate = true; // Signal the Task to call FastLED.show()
+  needsLEDUpdate = true; 
 }
 
 void startPreCountdown() {
@@ -156,29 +141,24 @@ void startPreCountdown() {
   lastScrollTime = millis();
     
   triggerBeep(150);  
-  // Fill border with warning color
   for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, ORANGE);
   
-  // Digit Logic: Swap physical locations if display is inverted
   if (!displayInverted) {
-      // Normal: "0" on the left, Countdown digit on the right
-      setDigit(0, 0, false);         // Left Minutes
-      setDigit(0, 49, false);        // Right Minutes
+      setDigit(0, 0, false);         
+      setDigit(0, 49, false);        
       setColon();
-      setDigit(countdown, 101, true); // Right Seconds (The countdown digit)
-      setDigit(0, 150, true);        // Left Seconds
+      setDigit(countdown, 101, true); 
+      setDigit(0, 150, true);        
   } else {
-      // Inverted: The physical "Right Seconds" (index 101) is now on the LEFT.
-      // We put the "0" there and put the countdown digit at index 0.
-      setDigit(countdown, 0, false);  // Physically Rightmost now
+      setDigit(countdown, 0, false);  
       setDigit(0, 49, false);
       setColon();
-      setDigit(0, 101, true);         // Physically Leftmost now
+      setDigit(0, 101, true);         
       setDigit(0, 150, true);
   }
   
   needsLEDUpdate = true;
-  currentState = PRE_COUNTDOWN_LOOP; // Move to the animation loop
+  currentState = PRE_COUNTDOWN_LOOP; 
 }
 
 void handlePreCountdownAnimation() {
@@ -186,7 +166,6 @@ void handlePreCountdownAnimation() {
   if (currentMillis - lastScrollTime >= scrollInterval) {
     lastScrollTime = currentMillis;
 
-    // Fill from 0 to scrollIndex with ORANGE
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       if (i >= scrollIndex) {
         setBorderLEDs(i, ORANGE);
@@ -197,8 +176,8 @@ void handlePreCountdownAnimation() {
     }
 
     needsLEDUpdate = true;
-
     scrollIndex--;
+
     if (scrollIndex < 0) {
       scrollIndex = BORDER_LED_COUNT - 1;
       countdown--;
@@ -223,7 +202,6 @@ void handlePreCountdownAnimation() {
           setDigit(0, 101, true);
           setDigit(0, 150, true);
       }
-
       needsLEDUpdate = true;
     }
   }
@@ -232,20 +210,15 @@ void handlePreCountdownAnimation() {
 void updateTimer() {
   unsigned long currentMillis = millis();
 
-  // Main timer counting down
   if (current_time > 0) {
-    // Countdown every 1 second
     if (currentMillis - lastCountdownTime >= 1000) {
       lastCountdownTime = currentMillis;
       current_time--;
       
-      updateClient();  // Reset to 2:00 (or 3:00)
+      updateClient();  
       updateLEDs();
-
-      broadcastMasterSync();
     }
   }
-
   else {
     triggerBeep(1200);
     currentState = FINISHED;
@@ -253,14 +226,11 @@ void updateTimer() {
 }
 
 void transitionToMatch() {
-  // Only reset the time if we aren't in the middle of a match
-  // If current_time is already less than countdown_time, we leave it alone
   if (current_time <= 0 || current_time == countdown_time) {
       current_time = countdown_time;
   }
 
   lastCountdownTime = millis();
-
   triggerBeep(1000);
   
   setBorder(); 
@@ -288,7 +258,6 @@ void processCommand(String cmd) {
   }
   else if (cmd == "pause" && currentState == RUNNING) { 
     currentState = PAUSED; 
-
     lastBlinkTime = 0; 
     blinkState = true;
     triggerBeep(300);
@@ -306,7 +275,7 @@ void processCommand(String cmd) {
         setBorder(); 
         updateLEDs(); 
         updateClient();
-        FastLED.show();//force LED update
+        FastLED.show();
     }
   } 
   else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING) {
@@ -321,7 +290,7 @@ void processCommand(String cmd) {
   }
   else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) { 
     countdown_time = (countdown_time == 120) ? 180 : 120; 
-    current_time = countdown_time; //
+    current_time = countdown_time; 
     bool newTimeSelState = (countdown_time == 180); 
     
     preferences.begin("settings", false); 
@@ -331,16 +300,13 @@ void processCommand(String cmd) {
     updateClient(); 
     updateLEDs(); 
   }
-
   else if (cmd == "clockOff") {
     Serial.println("[PERSISTENCE] Clock Mode toggled OFF via Web UI. Updating flash preference...");
     
-    // Save the disabled preference straight to flash memory right here
     preferences.begin("settings", false);
     preferences.putBool("clockActive", false);
     preferences.end();
 
-    // Drop the hardware back to standard match IDLE state
     currentState = IDLE;
     current_time = countdown_time;
     
@@ -349,8 +315,6 @@ void processCommand(String cmd) {
     updateClient();
     FastLED.show();
   }
-
-  broadcastMasterSync();
 }
 
 void setTeamReady(String team) {
@@ -372,34 +336,31 @@ void setTeamReady(String team) {
 void handleClockMode() {
   static unsigned long lastClockUpdate = 0;
   
-  // Throttle to update exactly once per second unless an immediate refresh is requested
-  if (millis() - lastClockUpdate < 1000 && !needsLEDUpdate) return; //
+  if (millis() - lastClockUpdate < 1000 && !needsLEDUpdate) return; 
   lastClockUpdate = millis();
 
-  struct tm timeinfo; //
-  // We know this will succeed because checkWiFiConnection() gates entry behind it!
-  if (!getLocalTime(&timeinfo)) return; //
+  struct tm timeinfo; 
+  if (!getLocalTime(&timeinfo)) return; 
 
   int hour = timeinfo.tm_hour;   
   int minute = timeinfo.tm_min;  
 
-  if (hour == 0) hour = 12; //
-  if (hour > 12) hour -= 12; //
+  if (hour == 0) hour = 12; 
+  if (hour > 12) hour -= 12; 
 
-  if (!displayInverted) { //
-      setDigit(hour / 10, 0, false); //
-      setDigit(hour % 10, 49, false); //
-      setColon(); //
-      setDigit(minute / 10, 150, true); //
-      setDigit(minute % 10, 101, true); //
+  if (!displayInverted) { 
+      setDigit(hour / 10, 0, false); 
+      setDigit(hour % 10, 49, false); 
+      setColon(); 
+      setDigit(minute / 10, 150, true); 
+      setDigit(minute % 10, 101, true); 
   } else {
-      setDigit(minute % 10, 0, false); //
-      setDigit(minute / 10, 49, false); //
-      setColon(); //
-      setDigit(hour % 10, 150, true); //
-      setDigit(hour / 10, 101, true); //
+      setDigit(minute % 10, 0, false); 
+      setDigit(minute / 10, 49, false); 
+      setColon(); 
+      setDigit(hour % 10, 150, true); 
+      setDigit(hour / 10, 101, true); 
   }
-  
   needsLEDUpdate = true;
 }
 
@@ -409,11 +370,8 @@ void handleTapoutAnimation() {
   static int scrollPos = 0; 
   
   unsigned long currentMillis = millis();
-  
-  // Clean, lightweight boolean evaluation instead of string comparison
   CRGB teamColor = tapoutInitiatorIsBlue ? CRGB::Blue : CRGB::Red;
   
-  // 1. Synchronized Border Flash
   if (currentMillis - lastTapoutUpdate >= 275) { 
     lastTapoutUpdate = currentMillis;
     flashToggle = !flashToggle;
@@ -422,10 +380,9 @@ void handleTapoutAnimation() {
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       setBorderLEDs(i, borderFlashColor);
     }
-    needsLEDUpdate = true; //
+    needsLEDUpdate = true; 
   }
 
-  // 2. Text Marquee Scroll (275ms)
   static unsigned long lastScrollUpdate = 0;
   if (currentMillis - lastScrollUpdate >= 275) { 
     lastScrollUpdate = currentMillis;
@@ -442,14 +399,14 @@ void handleTapoutAnimation() {
     char d3 = marqueeText[scrollPos + 2];
     char d4 = marqueeText[scrollPos + 3];
 
-    CRGB originalColor = digitColor; //
+    CRGB originalColor = digitColor; 
     digitColor = teamColor;
 
     if (!displayInverted) {
-      setChar(d1, 0, false);   //
-      setChar(d2, 49, false);  //
-      setChar(d3, 150, true);  //
-      setChar(d4, 101, true);  //
+      setChar(d1, 0, false);   
+      setChar(d2, 49, false);  
+      setChar(d3, 150, true);  
+      setChar(d4, 101, true);  
     } else {
       setChar(d4, 0, false);   
       setChar(d3, 49, false);  
@@ -458,7 +415,7 @@ void handleTapoutAnimation() {
     }
 
     digitColor = originalColor;
-    needsLEDUpdate = true; //
+    needsLEDUpdate = true; 
 
     scrollPos++;
     if (scrollPos > (textLength - 5)) {
@@ -470,19 +427,15 @@ void handleTapoutAnimation() {
 void triggerBeep(uint32_t durationMs) {
     if (!audioEnabled) return;
 
-    // Calculate the new target end time
     beepEndTime = millis() + durationMs;
-
-    // If it's already running, just update the time and exit 
-    // (avoids re-triggering the tone or clicking the relay)
     if (beepActive) return; 
 
     beepActive = true;
 
     if (audioOutputSelect == 0) {
-        tone(BUZZ_PIN, 2000); // Fire active frequency on Buzzer pin
+        tone(BUZZ_PIN, 2000); 
     } else {
-        digitalWrite(RELAY_PIN, HIGH); // Pull Relay active
+        digitalWrite(RELAY_PIN, HIGH); 
     }
 }
 

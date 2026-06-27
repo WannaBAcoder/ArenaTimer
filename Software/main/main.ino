@@ -57,42 +57,11 @@ bool beepActive = false;
 CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
 
-bool slaveModeEnabled = false;
-
 TaskHandle_t TimerTaskHandle = NULL;
 
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
-  if (slaveModeEnabled) {
-      if (len == sizeof(master_sync_message) && data[0] == 0xAA) {
-          master_sync_message msg;
-          memcpy(&msg, data, sizeof(msg));
-
-          // Force Real-time Variables instantly
-          current_time = msg.current_time;
-          currentState = msg.systemState;
-          tapoutInitiatorIsBlue = msg.tapoutInitiatorIsBlue;
-
-          // Check and update cosmetic configurations
-          if (systemBrightness != msg.brightness) {
-              systemBrightness = msg.brightness;
-              FastLED.setBrightness(systemBrightness);
-          }
-          if (digitColor != CRGB(msg.digitColorHex)) {
-              digitColor = CRGB(msg.digitColorHex);
-              updateLEDs();
-          }
-          
-          displayInverted = msg.displayInverted;
-          audioEnabled = msg.audioEnabled;
-          remoteAudioEnabled = msg.remoteAudioEnabled;
-
-          needsLEDUpdate = true;
-      }
-      return; // Absolute lockout: Salves ignore regular remote packets completely
-  }
- 
-  memcpy(&incoming, data, sizeof(incoming)); //
-  uint8_t* mac = info->src_addr; //
+  memcpy(&incoming, data, sizeof(incoming)); 
+  uint8_t* mac = info->src_addr; 
 
   // If it's a buzzer hold packet, we BYPASS the 300ms cooldown so we track the stream.
   static unsigned long lastPacketTime = 0;
@@ -102,30 +71,29 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
       Serial.printf("[ESP-NOW] Role: %s | Button: %d\n", incoming.deviceType, incoming.buttonID);
   }
 
-
-  if (pairingMode) { //
-      saveRole(mac, String(incoming.deviceType)); //
-      pairingMode = false; //
-      return; //
+  if (pairingMode) { 
+      saveRole(mac, String(incoming.deviceType)); 
+      pairingMode = false; 
+      return; 
   }
 
   // --- WIRELESS REMOTE LOGIC ---
-  if (strcmp(incoming.deviceType, "RedReady") == 0) { //
-      if (currentState == RUNNING) { //
+  if (strcmp(incoming.deviceType, "RedReady") == 0) { 
+      if (currentState == RUNNING) { 
           processCommand("tapoutRed");
       } else {
-          setTeamReady("Red"); //
+          setTeamReady("Red"); 
       }
   } 
-  else if (strcmp(incoming.deviceType, "BlueReady") == 0) { //
-      if (currentState == RUNNING) { //
+  else if (strcmp(incoming.deviceType, "BlueReady") == 0) { 
+      if (currentState == RUNNING) { 
           processCommand("tapoutBlue");
       } else {
-          setTeamReady("Blue"); //
+          setTeamReady("Blue"); 
       }
   }
-  else if (strcmp(incoming.deviceType, "Judge") == 0) { //
-    switch(incoming.buttonID) { //
+  else if (strcmp(incoming.deviceType, "Judge") == 0) { 
+    switch(incoming.buttonID) { 
         case 1: processCommand("start");   break; 
         case 2: processCommand("pause");   break; 
         case 3: processCommand("reset");   break; 
@@ -140,7 +108,6 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
 }
 
 void saveRole(const uint8_t *mac, String role) {
-    // Ensure 'preferences' is the global Preferences object used in your setup()
     preferences.begin("bot-timer", false); 
     
     if (role == "RedReady") {
@@ -164,15 +131,11 @@ void saveRole(const uint8_t *mac, String role) {
 void initNetwork() {
     connectWiFi();
 
-    // 1. Static Web Page
     server.on("/", handleRoot);
-
-    // 2. Control & Configuration Routes
     server.on("/control", handleControl);
     server.on("/settime", handleSetTime);
     server.on("/setwifi", handleSetWiFi);
     
-    // 3. Remote Pairing Logic
     server.on("/pair", []() { 
         pairingMode = true; 
         Serial.println("[SYSTEM] Pairing Mode Active");
@@ -184,7 +147,6 @@ void initNetwork() {
         server.send(200, "text/plain", "Remotes Wiped");
     });
 
-        // Update your /status endpoint to include tapoutEnabled
     server.on("/status", []() {
       String json = "{";
       json += "\"pairing\":" + String(pairingMode ? "true" : "false") + ",";
@@ -210,7 +172,6 @@ void initNetwork() {
       json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
       json += "\"brightness\":" + String(systemBrightness) + ",";
       json += "\"displayInverted\":" + String(displayInverted ? "true" : "false") + ",";
-      json += "\"slaveModeEnabled\":" + String(slaveModeEnabled ? "true" : "false") + ",";
 
       char hexColor[7];
       snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);
@@ -226,7 +187,6 @@ void initNetwork() {
       server.send(200, "application/json", json);
     });
 
-
     server.on("/setcolor", []() {
       if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
           server.send(403, "text/plain", "Locked during match");
@@ -234,16 +194,14 @@ void initNetwork() {
       }
 
       String hexStr = server.arg("hex");
-      // Convert the hex string from the browser (e.g., "ff0000") to a number
       uint32_t hex = strtol(hexStr.c_str(), NULL, 16);
       digitColor = CRGB(hex);
       
-      // Save to Flash Memory
       preferences.begin("settings", false);
       preferences.putUInt("digitColor", hex);
       preferences.end();
       
-      updateLEDs(); // Redraw digits with the new color
+      updateLEDs(); 
       server.send(200, "text/plain", "Color Saved");
   });
 
@@ -284,7 +242,6 @@ void initNetwork() {
         if (TimerTaskHandle != NULL) vTaskSuspend(TimerTaskHandle);
         currentState = CLOCK_MODE;
 
-        // Save Clock Mode Active flag to flash
         preferences.begin("settings", false);
         preferences.putBool("clockActive", true);
         preferences.end();
@@ -309,15 +266,13 @@ void initNetwork() {
             setDigit(hour / 10, 101, true);
         }
 
-    //clear the border 
-    for (int i = 0; i < BORDER_LED_COUNT; i++)
-        setBorderLEDs(i, ORANGE); 
+        for (int i = 0; i < BORDER_LED_COUNT; i++)
+            setBorderLEDs(i, ORANGE); 
 
         FastLED.show();
         needsLEDUpdate = false;
 
         if (TimerTaskHandle != NULL) vTaskResume(TimerTaskHandle);
-
         server.send(200, "text/plain", "Clock Seeded");
     });
 
@@ -326,7 +281,6 @@ void initNetwork() {
       preferences.begin("settings", false);
       preferences.putBool("dispInv", displayInverted);
       preferences.end();
-
       
       needsLEDUpdate = true;
      
@@ -359,7 +313,6 @@ void initNetwork() {
         server.send(200, "text/plain", "Audio Settings Saved");
     });
 
-    // 5. Start Communication Services
     webSocket.onEvent(onWebSocketEvent);
     webSocket.begin();
     server.begin();
@@ -378,52 +331,36 @@ void handleRoot() {
 }
 
 void handleControl() {
-    String cmd = server.arg("cmd"); //
-    
-    // --- ADD THIS CRITICAL DEBUGLOG LINE ---
+    String cmd = server.arg("cmd"); 
     Serial.printf("[WEB DEBUG] handleControl received endpoint query! cmd = '%s'\n", cmd.c_str());
     
-    if (cmd == "readytoggle") { //
-        String state = server.arg("state"); //
-        readyRequired = (state == "on"); //
-        preferences.begin("settings", false); //
-        preferences.putBool("readyRequired", readyRequired); //
-        preferences.end(); //
-        if(currentState != RUNNING) //
-          setBorder(); //
+    if (cmd == "readytoggle") { 
+        String state = server.arg("state"); 
+        readyRequired = (state == "on"); 
+        preferences.begin("settings", false); 
+        preferences.putBool("readyRequired", readyRequired); 
+        preferences.end(); 
+        if(currentState != RUNNING) 
+          setBorder(); 
     } 
-    else if (cmd == "tapouttoggle") { //
-        String state = server.arg("state"); //
-        tapoutEnabled = (state == "on"); //
+    else if (cmd == "tapouttoggle") { 
+        String state = server.arg("state"); 
+        tapoutEnabled = (state == "on"); 
         
-        preferences.begin("settings", false); //
-        preferences.putBool("tapoutEnabled", tapoutEnabled); //
-        preferences.end(); //
+        preferences.begin("settings", false); 
+        preferences.putBool("tapoutEnabled", tapoutEnabled); 
+        preferences.end(); 
         
-        Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED"); //
+        Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED"); 
     } 
-
-    else if (cmd == "slavetoggle") {
-        String state = server.arg("state");
-        slaveModeEnabled = (state == "on");
-
-        preferences.begin("settings", false);
-        preferences.putBool("slaveMode", slaveModeEnabled);
-        preferences.end();
-
-        Serial.printf("[SYSTEM] Passive Slave configuration updated: %s\n", slaveModeEnabled ? "ACTIVE" : "OFF");
-    }
     else {
-        processCommand(cmd); //
+        processCommand(cmd); 
     }
-
-    server.send(200, "text/plain", "OK"); //
+    server.send(200, "text/plain", "OK"); 
 }
 
-// INSERT NEW FUNCTION HERE:
 void handleSetTime() {
-
-  if (currentState == RUNNING || currentState == PRE_COUNTDOWN_LOOP) {
+    if (currentState == RUNNING || currentState == PRE_COUNTDOWN_LOOP) {
         server.send(403, "text/plain", "Cannot set time while match is active!");
         return;
     }
@@ -436,8 +373,6 @@ void handleSetTime() {
     
     updateClient();
     updateLEDs();
-
-    broadcastMasterSync();
     
     server.send(200, "text/plain", "Time Updated");
 }
@@ -450,9 +385,7 @@ void updateClient() {
   webSocket.broadcastTXT(buffer);
 }
 
-void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-  // Nothing to do here for now
-}
+void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {}
 
 void handleSetWiFi() {
     String ssid = server.arg("ssid");
@@ -484,15 +417,15 @@ void connectWiFi() {
     }
     
     WiFi.begin(ssid.c_str(), pass.c_str());
-    startAttemptTime = millis(); // Make sure this is a global variable
-    currentState = CONNECTING;   // Trigger the animation task
+    startAttemptTime = millis(); 
+    currentState = CONNECTING;   
 }
 
 void checkWiFiConnection() {
     if (currentState != CONNECTING) return;
 
     bool connectionFinished = false;
-    bool connectionFailed = false; // <-- Track if we dropped to AP mode
+    bool connectionFailed = false; 
 
     if (WiFi.status() == WL_CONNECTED) {
         static bool serversStarted = false;
@@ -513,13 +446,12 @@ void checkWiFiConnection() {
 
             serversStarted = true;
         }
-
         connectionFinished = true;
     } 
     else if (millis() - startAttemptTime > 30000) {
         startAPMode();
         connectionFinished = true;
-        connectionFailed = true; // <-- Mark that we are offline in AP mode!
+        connectionFailed = true; 
     }
 
     if (connectionFinished) {
@@ -527,13 +459,11 @@ void checkWiFiConnection() {
         bool clockActive = preferences.getBool("clockActive", false);
         preferences.end();
 
-        // Drop into standard match IDLE state first as our baseline landing
         currentState = IDLE;
         setBorder();
         updateClient();
         FastLED.show();
 
-        // SAFETY GATE: Only try to load clock mode if the connection actually SUCCEEDED
         if (clockActive && !connectionFailed) {
             Serial.println("[NETWORK] Saved Clock Mode detected. Queuing background calibration...");
             
@@ -590,7 +520,6 @@ void checkWiFiConnection() {
                     }
 
                     if (TimerTaskHandle != NULL) vTaskSuspend(TimerTaskHandle);
-                    
                     currentState = CLOCK_MODE;
                     
                     for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
@@ -611,28 +540,23 @@ void checkWiFiConnection() {
         } 
         else if (connectionFailed) {
             Serial.println("[SYSTEM WARNING] WiFi Connection failed! Gating in IDLE mode on Access Point hotspot.");
-            // Optional: You can change the border color here to indicate AP mode error state (e.g., solid Red or flashing)
         }
     }
 }
 
-
 void clearRemotes() {
     Serial.println("[SYSTEM] Wiping remote bindings...");
     
-    // Clear Flash Storage
     preferences.begin("bot-timer", false); 
     preferences.remove("redMAC"); 
     preferences.remove("blueMAC"); 
     preferences.remove("judgeMAC");
     preferences.end();
     
-    // Reset RAM Flags
     redPaired = false;
     bluePaired = false;
     judgePaired = false;
     
-    // Reset the internal buffers to be safe
     memset(redMAC, 0, 6);
     memset(blueMAC, 0, 6);
     memset(judgeMAC, 0, 6);
@@ -657,11 +581,7 @@ void loadSavedSettings() {
     audioEnabled = preferences.getBool("audioEnabled", true);
     remoteAudioEnabled = preferences.getBool("remoteAudio", true);
     audioOutputSelect = preferences.getUChar("audioOutput", 0);
-
-    slaveModeEnabled = preferences.getBool("slaveMode", false);
     
-    // We remain in CONNECTING state on boot so the loading snake runs normally,
-    // but the rest of the network routines will see this flag when finished.
     preferences.end(); 
     FastLED.setBrightness(systemBrightness); 
     uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000); 
@@ -674,20 +594,14 @@ void loadSavedSettings() {
 void setup() {
   Serial.begin(115200);
 
-  // Load saved Settings
   loadSavedSettings();
-
-  // Initialize LED Display
   initDisplay();
-
-  //Initialize Network
   initNetwork();
   
-  updateLEDs();//update the text LEDs
-  setBorder();//start the border on
+  updateLEDs();
+  setBorder();
   FastLED.show();
 
-  // Set up the buttons and switch pins
   pinMode(RESET_BTN, INPUT_PULLUP);
   pinMode(PAUSE_BTN, INPUT_PULLUP);
   pinMode(START_BTN, INPUT_PULLUP);
@@ -706,49 +620,38 @@ void setup() {
     
   xTaskCreate(
     [](void*) {
+        // Core loop state execution
         TickType_t lastWakeTime = xTaskGetTickCount();
         while (true) {
-
           checkAudioTimeout();
           
-          switch(currentState)
-          {
+          switch(currentState) {
             case CONNECTING:
               handleConnectingAnimation();
               checkWiFiConnection();
-              
             break;
-
             case PRE_COUNTDOWN_INIT:
               startPreCountdown();
             break;
-
             case PRE_COUNTDOWN_LOOP:
               handlePreCountdownAnimation();
             break;
-
             case RUNNING:
               updateTimer();
             break;
-
             case PAUSED:
               handlePausedBlink();
             break;
-
             case FINISHED:
             break;
-
             case CLOCK_MODE:
               handleClockMode();
             break;
-
             case TAPOUT:
               handleTapoutAnimation();
             break;
-          
           }
 
-          // LED Refresh Consumer
           if (needsLEDUpdate) {
               FastLED.show();
               needsLEDUpdate = false;
@@ -758,7 +661,6 @@ void setup() {
     },"TimerTask",4096, nullptr, 1, &TimerTaskHandle
   );
 
-  // 2. Button Polling Task
   xTaskCreate(
     [](void*) {
         while (true) {
@@ -769,31 +671,7 @@ void setup() {
   );
 }
 
-
 void loop() {
   server.handleClient();
   webSocket.loop();
 }
-
-void broadcastMasterSync() {
-    // Slaves never broadcast tracking commands
-    if (slaveModeEnabled) return;
-
-    master_sync_message msg;
-    msg.packetType = 0xAA;
-    msg.systemState = currentState;
-    msg.current_time = current_time;
-    msg.brightness = systemBrightness;
-    msg.displayInverted = displayInverted;
-    msg.audioEnabled = audioEnabled;
-    msg.remoteAudioEnabled = remoteAudioEnabled;
-    msg.tapoutInitiatorIsBlue = tapoutInitiatorIsBlue;
-
-    // Package 24-bit color string hex back to uint32 bitmask
-    uint32_t hexColor = ((uint32_t)digitColor.r << 16) | ((uint32_t)digitColor.g << 8) | digitColor.b;
-    msg.digitColorHex = hexColor;
-
-    uint8_t broadcastMAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    esp_now_send(broadcastMAC, (uint8_t *)&msg, sizeof(msg));
-}
-

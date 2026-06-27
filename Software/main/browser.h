@@ -75,11 +75,6 @@ const char* html = R"rawliteral(
                 <input type="checkbox" id="clockToggle" onchange="toggleClockMode()"> 
                 <label for="clockToggle" style="display:inline;">Enable Clock Mode</label>
             </div>
-
-            <div id="slaveSection" style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px;">
-                <input type="checkbox" id="slaveToggle" onchange="toggleSlaveMode()"> 
-                <label for="slaveToggle" style="display:inline; color: #ff3333; font-weight: bold;">Enable Passive Slave Mode</label>
-            </div>
         </div>
 
         <div id="displaySection" class="status">
@@ -144,7 +139,6 @@ const char* html = R"rawliteral(
                     if(data.displayInverted !== undefined) document.getElementById('flipToggle').checked = data.displayInverted;
                     if(data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
                     if(data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
-                    if(data.slaveModeEnabled !== undefined) document.getElementById('slaveToggle').checked = data.slaveModeEnabled;
                     
                     if(data.audioEnabled !== undefined) document.getElementById('audioToggle').checked = data.audioEnabled;
                     if(data.remoteAudioEnabled !== undefined) document.getElementById('remoteAudioToggle').checked = data.remoteAudioEnabled;
@@ -155,7 +149,7 @@ const char* html = R"rawliteral(
                     
                     const isClockMode = (data.state === "CLOCK_MODE");
                     document.getElementById('clockToggle').checked = isClockMode;
-                    updateControls(isClockMode || data.slaveModeEnabled);
+                    updateControls(isClockMode);
                 });
             };
 
@@ -195,12 +189,6 @@ const char* html = R"rawliteral(
                 setTimeout(() => { isLockingUI = false; }, 1500);
             }
 
-            function toggleSlaveMode() {
-                const state = document.getElementById('slaveToggle').checked ? "on" : "off";
-                fetch(`/control?cmd=slavetoggle&state=${state}`)
-                .then(() => location.reload()); 
-            }
-
             function updateControls(isLocked) {
                 const timerControls = document.getElementById('timerControls');
                 if (isLocked) timerControls.classList.add('disabled-ui');
@@ -236,7 +224,7 @@ const char* html = R"rawliteral(
 
                         const timerControls = document.getElementById('timerControls');
                         if (isTapout || isPaused || isIdle) {
-                            if (!data.slaveModeEnabled) timerControls.classList.remove('disabled-ui');
+                            timerControls.classList.remove('disabled-ui');
                         }
 
                         const countdownEl = document.getElementById('countdown');
@@ -250,7 +238,7 @@ const char* html = R"rawliteral(
                         const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn'];
                         lockGroup.forEach(id => {
                             const btn = document.getElementById(id);
-                            if (data.slaveModeEnabled || isRunning) {
+                            if (isRunning) {
                                 btn.classList.add('blocked-feature');
                                 btn.disabled = true;
                             } else if ((isPaused || isTapout) && id === 'resetBtn') {
@@ -268,13 +256,13 @@ const char* html = R"rawliteral(
                             }
                         });
 
-                        document.getElementById('pauseBtn').disabled = !isRunning || data.slaveModeEnabled;
-                        if (!isRunning || data.slaveModeEnabled) document.getElementById('pauseBtn').classList.add('blocked-feature');
+                        document.getElementById('pauseBtn').disabled = !isRunning;
+                        if (!isRunning) document.getElementById('pauseBtn').classList.add('blocked-feature');
                         else document.getElementById('pauseBtn').classList.remove('blocked-feature');
 
                         // 2. SETTINGS PANEL LOCKOUT
                         const isMatchActive = (!isIdle && !isTapout);
-                        const shouldLockSettings = isMatchActive || data.slaveModeEnabled;
+                        const shouldLockSettings = isMatchActive;
                         
                         const sections = ['displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
                         sections.forEach(id => {
@@ -283,7 +271,6 @@ const char* html = R"rawliteral(
                             else if (el) el.classList.remove('blocked-feature');
                         });
 
-                        // Keep the status panel visual wrapper un-grayed in passive slave mode so the checkbox stays clean
                         const statusSection = document.getElementById('systemStatusSection');
                         if (statusSection) {
                             if (isMatchActive) statusSection.classList.add('blocked-feature');
@@ -295,7 +282,7 @@ const char* html = R"rawliteral(
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
-                                if (id === 'tapoutToggle' && !data.slaveModeEnabled) {
+                                if (id === 'tapoutToggle') {
                                     el.disabled = false; 
                                 } else {
                                     el.disabled = shouldLockSettings;
@@ -303,24 +290,17 @@ const char* html = R"rawliteral(
                             }
                         });
 
-                        // Explicitly handle slave toggle fallback constraint separately
-                        const slaveToggleEl = document.getElementById('slaveToggle');
-                        if (slaveToggleEl) {
-                            slaveToggleEl.disabled = isMatchActive; 
-                        }
-
                         const radioGroup = document.querySelectorAll('input[name="outputSelect"]');
                         radioGroup.forEach(radio => { radio.disabled = shouldLockSettings; });
 
                         if (!isLockingUI) {
                             const isClockMode = (data.state === "CLOCK_MODE");
                             document.getElementById('clockToggle').checked = isClockMode;
-                            if(!data.slaveModeEnabled) updateControls(isClockMode);
+                            updateControls(isClockMode);
 
                             if (data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
                             if (data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
                             if (data.remoteAudioEnabled !== undefined) document.getElementById('remoteAudioToggle').checked = data.remoteAudioEnabled;
-                            if (data.slaveModeEnabled !== undefined) document.getElementById('slaveToggle').checked = data.slaveModeEnabled;
                         }
                     })
                     .catch(e => console.error(e));
