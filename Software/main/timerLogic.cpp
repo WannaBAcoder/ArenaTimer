@@ -36,6 +36,13 @@ const unsigned long blinkInterval = 500; // Blink every 500ms
 
 extern TaskHandle_t TimerTaskHandle;
 
+unsigned long lastPatternTick = 0;
+uint8_t patternStep = 0;
+bool rapidPatternActive = false;
+
+int tapoutScrollPos = 0;
+bool tapoutAudioTriggeredThisCycle = false;
+
 void handleConnectingAnimation() {
   static uint8_t head = 0;
   static unsigned long lastAnimTime = 0;
@@ -282,10 +289,17 @@ void processCommand(String cmd) {
     if (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE || currentState == TAPOUT || currentState == IDLE) { 
         Serial.println("[SYSTEM] Executing deep display flush and state reset...");
         
+        rapidPatternActive = false;
+        patternStep = 0;
+        noTone(BUZZ_PIN);
+        digitalWrite(RELAY_PIN, LOW);
+
         blueReady = redReady = false; 
         currentState = IDLE; 
         current_time = countdown_time; 
         blinkState = true; 
+        tapoutScrollPos = 0;
+        tapoutAudioTriggeredThisCycle = false;
 
         setBorder(); 
         updateLEDs(); 
@@ -297,12 +311,17 @@ void processCommand(String cmd) {
     if (tapoutEnabled) {
         tapoutInitiatorIsBlue = (cmd == "tapoutBlue");
         currentState = TAPOUT;
+
         Serial.printf("[MATCH EVENT] TAPOUT ENFORCED BY %s!\n", tapoutInitiatorIsBlue ? "BLUE" : "RED");
         updateClient();
+
+        tapoutScrollPos = 0;
+
     } else {
         Serial.printf("[SYSTEM IGNORE] %s pressed button, but Tapouts are DISABLED.\n", (cmd == "tapoutBlue") ? "Blue" : "Red");
     }
   }
+
   else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) { 
     countdown_time = (countdown_time == 120) ? 180 : 120; 
     current_time = countdown_time; 
@@ -382,12 +401,11 @@ void handleClockMode() {
 void handleTapoutAnimation() {
   static unsigned long lastTapoutUpdate = 0;
   static bool flashToggle = false;
-  static int scrollPos = 0; 
-  
+    
   unsigned long currentMillis = millis();
   CRGB teamColor = tapoutInitiatorIsBlue ? CRGB::Blue : CRGB::Red;
   
-  if (currentMillis - lastTapoutUpdate >= 275) { 
+  if (currentMillis - lastTapoutUpdate >= 275) {
     lastTapoutUpdate = currentMillis;
     flashToggle = !flashToggle;
     
@@ -395,11 +413,11 @@ void handleTapoutAnimation() {
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       setBorderLEDs(i, borderFlashColor);
     }
-    needsLEDUpdate = true; 
+    needsLEDUpdate = true;
   }
 
   static unsigned long lastScrollUpdate = 0;
-  if (currentMillis - lastScrollUpdate >= 275) { 
+  if (currentMillis - lastScrollUpdate >= 275) {
     lastScrollUpdate = currentMillis;
 
     const char marqueeText[] = "    tAP OUt    ";
@@ -409,33 +427,44 @@ void handleTapoutAnimation() {
       setDigitLEDs(i, CRGB::Black);
     }
 
-    char d1 = marqueeText[scrollPos];
-    char d2 = marqueeText[scrollPos + 1];
-    char d3 = marqueeText[scrollPos + 2];
-    char d4 = marqueeText[scrollPos + 3];
+    char d1 = marqueeText[tapoutScrollPos];
+    char d2 = marqueeText[tapoutScrollPos + 1];
+    char d3 = marqueeText[tapoutScrollPos + 2];
+    char d4 = marqueeText[tapoutScrollPos + 3];
 
-    CRGB originalColor = digitColor; 
+    CRGB originalColor = digitColor;
     digitColor = teamColor;
 
     if (!displayInverted) {
-      setChar(d1, 0, false);   
-      setChar(d2, 49, false);  
-      setChar(d3, 150, true);  
-      setChar(d4, 101, true);  
+      setChar(d1, 0, false);
+      setChar(d2, 49, false);
+      setChar(d3, 150, true);
+      setChar(d4, 101, true);
     } else {
-      setChar(d4, 0, false);   
-      setChar(d3, 49, false);  
-      setChar(d2, 150, true);  
-      setChar(d1, 101, true);  
+      setChar(d4, 0, false);
+      setChar(d3, 49, false);
+      setChar(d2, 150, true);
+      setChar(d1, 101, true);
     }
 
     digitColor = originalColor;
-    needsLEDUpdate = true; 
+    needsLEDUpdate = true;
 
-    scrollPos++;
-    if (scrollPos > (textLength - 5)) {
-      scrollPos = 0; 
+    if (tapoutScrollPos == 0) {
+      if (!tapoutAudioTriggeredThisCycle) {
+        rapidPatternActive = true;
+        patternStep = 0;
+        lastPatternTick = currentMillis;
+        tapoutAudioTriggeredThisCycle = true; // Guard it so it doesn't continuously spam at pos 0
+      }
+    } else {
+      tapoutAudioTriggeredThisCycle = false;
     }
+    
+    tapoutScrollPos++;
+    if (tapoutScrollPos > (textLength - 5)) {
+      tapoutScrollPos = 0;
+    } 
   }
 }
 
@@ -455,11 +484,40 @@ void triggerBeep(uint32_t durationMs) {
 }
 
 void checkAudioTimeout() {
-    if (!beepActive) return;
+  unsigned long currentMillis = millis();
 
-    if (millis() >= beepEndTime) {
+  if (rapidPatternActive) {
+    // Dynamically choose interval: 60ms for Buzzer (0), 120ms for Relay (1)
+    unsigned long dynamicInterval = (audioOutputSelect == 0) ? 60 : 120;
+
+    if (currentMillis - lastPatternTick >= dynamicInterval) {
+      lastPatternTick = currentMillis;
+      patternStep++;
+
+      if (patternStep < 8) {
+        bool shouldBeep = (patternStep % 2 == 0);
+        if (shouldBeep && audioEnabled) {
+            if (audioOutputSelect == 0) tone(BUZZ_PIN, 2000);
+            else digitalWrite(RELAY_PIN, HIGH);
+        } else {
+            noTone(BUZZ_PIN);
+            digitalWrite(RELAY_PIN, LOW);
+        }
+      } 
+      else {
         noTone(BUZZ_PIN);
         digitalWrite(RELAY_PIN, LOW);
-        beepActive = false;
+        rapidPatternActive = false;
+      }
     }
+    return; 
+  }
+
+  if (!beepActive) return;
+
+  if (currentMillis >= beepEndTime) {
+      noTone(BUZZ_PIN);
+      digitalWrite(RELAY_PIN, LOW);
+      beepActive = false;
+  }
 }
