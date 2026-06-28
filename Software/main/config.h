@@ -32,6 +32,12 @@
 #define HALF_BORDER (BORDER_LED_COUNT / 2)
 #define PHYSICAL_STRIP_LEN (HALF_DIGIT + HALF_BORDER)
 
+// Hardware selection pin (Short to GND for Single-Sided Mode)
+#define HW_VARIANT_PIN 22
+
+// Double-sided absolute memory buffer requirement
+#define DOUBLE_STRIP_LEN (PHYSICAL_STRIP_LEN * 2)
+
 // Add to Config.h
 extern CRGB digitColor;
 extern uint8_t systemBrightness;

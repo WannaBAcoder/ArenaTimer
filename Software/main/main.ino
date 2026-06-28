@@ -59,6 +59,8 @@ uint8_t systemBrightness = 127;
 
 TaskHandle_t TimerTaskHandle = NULL;
 
+bool isDoubleSided = true;
+
 void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
   memcpy(&incoming, data, sizeof(incoming)); 
   uint8_t* mac = info->src_addr; 
@@ -284,6 +286,7 @@ void initNetwork() {
         for (int i = 0; i < BORDER_LED_COUNT; i++)
             setBorderLEDs(i, ORANGE); 
 
+        applyDoubleSidedMirror();
         FastLED.show();
         needsLEDUpdate = false;
 
@@ -543,6 +546,7 @@ void checkWiFiConnection() {
                     handleClockMode();
                     setBorder();
                     
+                    applyDoubleSidedMirror();
                     FastLED.show();
                     needsLEDUpdate = false;
                     
@@ -609,6 +613,18 @@ void loadSavedSettings() {
 void setup() {
   Serial.begin(115200);
 
+  // Configure strap pin with an internal pullup
+  pinMode(HW_VARIANT_PIN, INPUT_PULLUP);
+  delay(10); // Allow line voltage to settle
+
+  if (digitalRead(HW_VARIANT_PIN) == LOW) {
+      isDoubleSided = false;
+      Serial.println("[BOOT] HW Strap detected: GND. Configuring for SINGLE-SIDED mode.");
+  } else {
+      isDoubleSided = true;
+      Serial.println("[BOOT] HW Strap detected: OPEN. Configuring for DOUBLE-SIDED mode.");
+  }
+
   loadSavedSettings();
   initDisplay();
   initNetwork();
@@ -668,6 +684,7 @@ void setup() {
           }
 
           if (needsLEDUpdate) {
+              applyDoubleSidedMirror();
               FastLED.show();
               needsLEDUpdate = false;
           }

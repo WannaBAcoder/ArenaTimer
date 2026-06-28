@@ -241,7 +241,8 @@ void updateTimer() {
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       setBorderLEDs(i, CRGB::Green);
     }
-
+    
+    applyDoubleSidedMirror();
     FastLED.show();
     needsLEDUpdate = false;
   }

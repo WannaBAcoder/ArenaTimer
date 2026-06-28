@@ -1,14 +1,22 @@
 #include "Display.h"
 
 extern bool needsLEDUpdate;
+extern bool isDoubleSided;
 
 // Define the physical arrays here, since they are used by the Display functions
-CRGB digit_physical[PHYSICAL_STRIP_LEN];
-CRGB border_physical[PHYSICAL_STRIP_LEN];
+CRGB digit_physical[DOUBLE_STRIP_LEN];
+CRGB border_physical[DOUBLE_STRIP_LEN];
+
+int mirrorOffsetIndex = 0;
 
 void initDisplay() {
-    FastLED.addLeds<NEOPIXEL, DIGIT_PIN>(digit_physical, PHYSICAL_STRIP_LEN);
-    FastLED.addLeds<NEOPIXEL, BORDER_PIN>(border_physical, PHYSICAL_STRIP_LEN);
+    if (isDoubleSided) {
+        FastLED.addLeds<NEOPIXEL, DIGIT_PIN>(digit_physical, DOUBLE_STRIP_LEN);
+        FastLED.addLeds<NEOPIXEL, BORDER_PIN>(border_physical, DOUBLE_STRIP_LEN);
+    } else {
+        FastLED.addLeds<NEOPIXEL, DIGIT_PIN>(digit_physical, PHYSICAL_STRIP_LEN);
+        FastLED.addLeds<NEOPIXEL, BORDER_PIN>(border_physical, PHYSICAL_STRIP_LEN);
+    }
 }
 
 void setDigit(int digit, int offset, bool inverted) {
@@ -142,22 +150,99 @@ void setBorder() {
 
 void setDigitLEDs(int index, CRGB color) {
     if (index < HALF_DIGIT) {
-        digit_physical[index] = color;
+        digit_physical[mirrorOffsetIndex + index] = color;
     } else {
         int mapped = index - HALF_DIGIT;
         if (mapped < (PHYSICAL_STRIP_LEN - HALF_BORDER)) {
-            border_physical[HALF_BORDER + mapped] = color;
+            border_physical[mirrorOffsetIndex + HALF_BORDER + mapped] = color;
         }
     }
 }
 
 void setBorderLEDs(int index, CRGB color) {
     if (index < HALF_BORDER) {
-        border_physical[index] = color;
+        border_physical[mirrorOffsetIndex + index] = color;
     } else {
         int mapped = index - HALF_BORDER;
         if (mapped < (PHYSICAL_STRIP_LEN - HALF_DIGIT)) {
-            digit_physical[HALF_DIGIT + mapped] = color;
+            digit_physical[mirrorOffsetIndex + HALF_DIGIT + mapped] = color;
+        }
+    }
+}
+
+//this one is a doozy, handles drawing side B but flipping the border sides
+void applyDoubleSidedMirror() {
+    if (!isDoubleSided) return;
+
+    // 1. Tank-proof 1:1 raw parallel clone baseline
+    for (int i = 0; i < PHYSICAL_STRIP_LEN; i++) {
+        digit_physical[PHYSICAL_STRIP_LEN + i] = digit_physical[i];
+        border_physical[PHYSICAL_STRIP_LEN + i] = border_physical[i];
+    }
+
+    // 2. Force the 180-degree border flip on Side B during active match states
+    if (currentState == RUNNING || currentState == PAUSED || currentState == IDLE) {
+        
+        // Loop through the first half of the logical border (70 pixels)
+        for (int i = 0; i < HALF_BORDER; i++) {
+            int idxA = i;                  // First half (e.g., 0-69)
+            int idxB = HALF_BORDER + i;    // Opposite half (e.g., 70-139)
+
+            // Calculate exact physical source locations on Side A
+            int srcPhysIdxA_digit = -1, srcPhysIdxA_border = -1;
+            int srcPhysIdxB_digit = -1, srcPhysIdxB_border = -1;
+
+            // Resolve Side A physical slots for Quadrant A using your exact driver mapping rules
+            if (idxA < HALF_BORDER) {
+                srcPhysIdxA_border = idxA;
+            } else {
+                srcPhysIdxA_digit = HALF_DIGIT + (idxA - HALF_BORDER);
+            }
+
+            // Resolve Side A physical slots for Quadrant B
+            if (idxB < HALF_BORDER) {
+                srcPhysIdxB_border = idxB;
+            } else {
+                srcPhysIdxB_digit = HALF_DIGIT + (idxB - HALF_BORDER);
+            }
+
+            // Calculate exact physical destination locations on Side B
+            int destPhysIdxA_digit = -1, destPhysIdxA_border = -1;
+            int destPhysIdxB_digit = -1, destPhysIdxB_border = -1;
+
+            if (idxA < HALF_BORDER) {
+                destPhysIdxA_border = PHYSICAL_STRIP_LEN + idxA;
+            } else {
+                destPhysIdxA_digit = PHYSICAL_STRIP_LEN + HALF_DIGIT + (idxA - HALF_BORDER);
+            }
+
+            if (idxB < HALF_BORDER) {
+                destPhysIdxB_border = PHYSICAL_STRIP_LEN + idxB;
+            } else {
+                destPhysIdxB_digit = PHYSICAL_STRIP_LEN + HALF_DIGIT + (idxB - HALF_BORDER);
+            }
+
+            // Overwrite Side B Side A (Quadrant A Destination gets Side A Quadrant B Source)
+            if (destPhysIdxA_border != -1 && srcPhysIdxB_border != -1) {
+                border_physical[destPhysIdxA_border] = border_physical[srcPhysIdxB_border];
+            } else if (destPhysIdxA_digit != -1 && srcPhysIdxB_digit != -1) {
+                digit_physical[destPhysIdxA_digit] = digit_physical[srcPhysIdxB_digit];
+            } else if (destPhysIdxA_border != -1 && srcPhysIdxB_digit != -1) {
+                border_physical[destPhysIdxA_border] = digit_physical[srcPhysIdxB_digit];
+            } else if (destPhysIdxA_digit != -1 && srcPhysIdxB_border != -1) {
+                digit_physical[destPhysIdxA_digit] = border_physical[srcPhysIdxB_border];
+            }
+
+            // Overwrite Side B Side B (Quadrant B Destination gets Side A Quadrant A Source)
+            if (destPhysIdxB_border != -1 && srcPhysIdxA_border != -1) {
+                border_physical[destPhysIdxB_border] = border_physical[srcPhysIdxA_border];
+            } else if (destPhysIdxB_digit != -1 && srcPhysIdxA_digit != -1) {
+                digit_physical[destPhysIdxB_digit] = digit_physical[srcPhysIdxA_digit];
+            } else if (destPhysIdxB_border != -1 && srcPhysIdxA_digit != -1) {
+                border_physical[destPhysIdxB_border] = digit_physical[srcPhysIdxA_digit];
+            } else if (destPhysIdxB_digit != -1 && srcPhysIdxA_border != -1) {
+                digit_physical[destPhysIdxB_digit] = border_physical[srcPhysIdxA_border];
+            }
         }
     }
 }

@@ -13,5 +13,6 @@ void updateLEDs();
 void setBorder();
 void setDigitLEDs(int index, CRGB color);
 void setBorderLEDs(int index, CRGB color);
+void applyDoubleSidedMirror();
 
 #endif
