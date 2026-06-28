@@ -279,7 +279,7 @@ void processCommand(String cmd) {
     updateClient();
   } 
   else if (cmd == "reset") { 
-    if (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE || currentState == TAPOUT) { 
+    if (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE || currentState == TAPOUT || currentState == IDLE) { 
         Serial.println("[SYSTEM] Executing deep display flush and state reset...");
         
         blueReady = redReady = false; 

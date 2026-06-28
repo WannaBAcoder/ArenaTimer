@@ -90,8 +90,7 @@ void loop() {
                     // Send a fast 1-packet-per-channel sweep across the spectrum (~30ms)
                     shotgunBlast(BUTTON_IDS[i], 1);
                     
-                    // 90ms gap lets the spectrum clear and ensures the timer's core loops don't choke
-                    delay(90); 
+                    delay(25); 
                 }
             } else { // REGULAR BUTTON CLICK
                 // Send a highly secure 3-packet-per-channel blast to guarantee delivery

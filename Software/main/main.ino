@@ -79,30 +79,45 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
 
   // --- WIRELESS REMOTE LOGIC ---
   if (strcmp(incoming.deviceType, "RedReady") == 0) { 
-      if (currentState == RUNNING) { 
-          processCommand("tapoutRed");
-      } else {
-          setTeamReady("Red"); 
-      }
+    // Validate that this packet came from the paired Red Remote
+    if (redPaired && memcmp(mac, redMAC, 6) == 0) {
+        if (currentState == RUNNING) { 
+            processCommand("tapoutRed");
+        } else {
+            setTeamReady("Red");
+        }
+    } else {
+        Serial.println("[ESP-NOW REJECT] Unpaired or unauthorized Red packet source.");
+    }
   } 
   else if (strcmp(incoming.deviceType, "BlueReady") == 0) { 
-      if (currentState == RUNNING) { 
-          processCommand("tapoutBlue");
-      } else {
-          setTeamReady("Blue"); 
-      }
+    // Validate that this packet came from the paired Blue Remote
+    if (bluePaired && memcmp(mac, blueMAC, 6) == 0) {
+        if (currentState == RUNNING) { 
+            processCommand("tapoutBlue");
+        } else {
+            setTeamReady("Blue");
+        }
+    } else {
+        Serial.println("[ESP-NOW REJECT] Unpaired or unauthorized Blue packet source.");
+    }
   }
   else if (strcmp(incoming.deviceType, "Judge") == 0) { 
-    switch(incoming.buttonID) { 
-        case 1: processCommand("start");   break; 
-        case 2: processCommand("pause");   break; 
-        case 3: processCommand("reset");   break; 
-        case 4: processCommand("switch");  break; 
-        case 5: 
-            if (audioEnabled && remoteAudioEnabled) {
-                triggerBeep(250); 
-            }
-            break;
+    // Validate that this packet came from the paired Judge Remote
+    if (judgePaired && memcmp(mac, judgeMAC, 6) == 0) {
+        switch(incoming.buttonID) { 
+            case 1: processCommand("start");   break; 
+            case 2: processCommand("pause");   break; 
+            case 3: processCommand("reset");   break; 
+            case 4: processCommand("switch");  break;
+            case 5: 
+                if (audioEnabled && remoteAudioEnabled) {
+                    triggerBeep(250);
+                }
+                break;
+        }
+    } else {
+        Serial.println("[ESP-NOW REJECT] Unpaired or unauthorized Judge packet source.");
     }
   }
 }

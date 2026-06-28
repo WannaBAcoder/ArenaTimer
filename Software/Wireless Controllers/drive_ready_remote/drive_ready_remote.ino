@@ -2,7 +2,7 @@
 #include <espnow.h>
 
 // --- CONFIGURATION ---
-const char* DEV_TYPE = "BlueReady"; 
+const char* DEV_TYPE = "RedReady";//BlueReady
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 typedef struct struct_message {
