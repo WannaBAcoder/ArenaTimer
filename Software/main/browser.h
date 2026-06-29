@@ -220,11 +220,14 @@ const char* html = R"rawliteral(
                         const isRunning = (data.state === "RUNNING" || data.state === "PRE_COUNTDOWN_LOOP");
                         const isPaused = (data.state === "PAUSED");
                         const isTapout = (data.state === "TAPOUT");
-                        const isIdle = (data.state === "IDLE" || data.state === "FINISHED" || data.state === "CLOCK_MODE");
+                        const isClockMode = (data.state === "CLOCK_MODE");
+                        const isIdle = (data.state === "IDLE" || data.state === "FINISHED");
 
                         const timerControls = document.getElementById('timerControls');
                         if (isTapout || isPaused || isIdle) {
                             timerControls.classList.remove('disabled-ui');
+                        } else if (isClockMode) {
+                            timerControls.classList.add('disabled-ui');
                         }
 
                         const countdownEl = document.getElementById('countdown');
@@ -235,46 +238,59 @@ const char* html = R"rawliteral(
                         }
 
                         // 1. TIMER BUTTON LOCKOUT
-                        const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn'];
+                        const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn', 'pauseBtn'];
                         lockGroup.forEach(id => {
                             const btn = document.getElementById(id);
-                            if (isRunning) {
+                            if (!btn) return;
+
+                            if (isClockMode) {
                                 btn.classList.add('blocked-feature');
                                 btn.disabled = true;
-                            } else if ((isPaused || isTapout) && id === 'resetBtn') {
-                                btn.classList.remove('blocked-feature');
-                                btn.disabled = false;
-                            } else if (isPaused && id === 'startBtn') {
-                                btn.classList.remove('blocked-feature');
-                                btn.disabled = false;
-                            } else if (!isIdle && !isTapout) {
-                                btn.classList.add('blocked-feature');
-                                btn.disabled = true;
+                            } else if (isRunning) {
+                                if (id === 'pauseBtn') {
+                                    btn.classList.remove('blocked-feature');
+                                    btn.disabled = false;
+                                } else {
+                                    btn.classList.add('blocked-feature');
+                                    btn.disabled = true;
+                                }
+                            } else if (isPaused || isTapout) {
+                                if (id === 'resetBtn' || (id === 'startBtn' && isPaused)) {
+                                    btn.classList.remove('blocked-feature');
+                                    btn.disabled = false;
+                                } else {
+                                    btn.classList.add('blocked-feature');
+                                    btn.disabled = true;
+                                }
                             } else {
-                                btn.classList.remove('blocked-feature');
-                                btn.disabled = false;
+                                if (id === 'pauseBtn') {
+                                    btn.classList.add('blocked-feature');
+                                    btn.disabled = true;
+                                } else {
+                                    btn.classList.remove('blocked-feature');
+                                    btn.disabled = false;
+                                }
                             }
                         });
 
-                        document.getElementById('pauseBtn').disabled = !isRunning;
-                        if (!isRunning) document.getElementById('pauseBtn').classList.add('blocked-feature');
-                        else document.getElementById('pauseBtn').classList.remove('blocked-feature');
-
                         // 2. SETTINGS PANEL LOCKOUT
-                        const isMatchActive = (!isIdle && !isTapout);
-                        const shouldLockSettings = isMatchActive;
-                        
+                        const shouldLockSettings = isRunning || isPaused || isTapout || isClockMode;
                         const sections = ['displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
-                            if (el && shouldLockSettings) el.classList.add('blocked-feature');
-                            else if (el) el.classList.remove('blocked-feature');
+                            if (el) {
+                                if (shouldLockSettings) el.classList.add('blocked-feature');
+                                else el.classList.remove('blocked-feature');
+                            }
                         });
 
                         const statusSection = document.getElementById('systemStatusSection');
                         if (statusSection) {
-                            if (isMatchActive) statusSection.classList.add('blocked-feature');
-                            else statusSection.classList.remove('blocked-feature');
+                            if (isRunning || isPaused || isTapout) {
+                                statusSection.classList.add('blocked-feature');
+                            } else {
+                                statusSection.classList.remove('blocked-feature');
+                            }
                         }
 
                         // 3. INDIVIDUAL INPUT COMPONENT DISABLING
@@ -282,8 +298,11 @@ const char* html = R"rawliteral(
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
-                                if (id === 'tapoutToggle') {
-                                    el.disabled = false; 
+                                if (id === 'clockToggle') {
+                                    // Clock toggle stays unlocked during CLOCK_MODE so we can escape!
+                                    el.disabled = isRunning || isPaused || isTapout;
+                                } else if (id === 'tapoutToggle') {
+                                    el.disabled = isClockMode; 
                                 } else {
                                     el.disabled = shouldLockSettings;
                                 }
@@ -294,7 +313,6 @@ const char* html = R"rawliteral(
                         radioGroup.forEach(radio => { radio.disabled = shouldLockSettings; });
 
                         if (!isLockingUI) {
-                            const isClockMode = (data.state === "CLOCK_MODE");
                             document.getElementById('clockToggle').checked = isClockMode;
                             updateControls(isClockMode);
 
