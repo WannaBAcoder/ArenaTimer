@@ -184,7 +184,6 @@ void handlePreCountdownAnimation() {
       }
     }
 
-    needsLEDUpdate = true;
     scrollIndex--;
 
     if (scrollIndex < 0) {
@@ -211,8 +210,8 @@ void handlePreCountdownAnimation() {
           setDigit(0, 101, true);
           setDigit(0, 150, true);
       }
-      needsLEDUpdate = true;
     }
+    needsLEDUpdate = true; 
   }
 }
 
