@@ -43,26 +43,39 @@ bool rapidPatternActive = false;
 int tapoutScrollPos = 0;
 bool tapoutAudioTriggeredThisCycle = false;
 
-void handleConnectingAnimation() {
-  static uint8_t head = 0;
-  static unsigned long lastAnimTime = 0;
-  const uint8_t animSpeed = 30; // Milliseconds per frame
-  const uint8_t tailLength = 15;
+extern CRGB digit_physical[];
+extern CRGB border_physical[];
 
-  if (millis() - lastAnimTime >= animSpeed) {
+void handleConnectingAnimation() {
+  static unsigned long lastAnimTime = 0;
+  static bool borderOn = true;
+  const uint16_t blinkInterval = 500; // Blink every 500ms
+
+  if (millis() - lastAnimTime >= 30) {
     lastAnimTime = millis();
 
+    if (millis() % (blinkInterval * 2) < blinkInterval) {
+      borderOn = true;
+    } else {
+      borderOn = false;
+    }
+
+    for (int i = 0; i < DOUBLE_STRIP_LEN; i++) {
+      digit_physical[i] = CRGB::Black;
+      border_physical[i] = CRGB::Black;
+    }
+
+    CRGB currentBorderColor = borderOn ? ORANGE : CRGB::Black;
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
-      setBorderLEDs(i, CRGB::Black);
+      setBorderLEDs(i, currentBorderColor);
     }
 
-    for (int i = 0; i < tailLength; i++) {
-      int pos = (head - i + BORDER_LED_COUNT) % BORDER_LED_COUNT;
-      uint8_t brightness = map(i, 0, tailLength, 255, 0);
-      setBorderLEDs(pos, ORANGE.fadeToBlackBy(255 - brightness)); 
-    }
+    setChar('-', 0, displayInverted); 
+    setChar('-', 49, displayInverted);  
+    setChar('-', 150, displayInverted); 
+    setChar('-', 101, displayInverted); 
+    setColon();                         
 
-    head = (head + 1) % BORDER_LED_COUNT;
     needsLEDUpdate = true;
   }
 }

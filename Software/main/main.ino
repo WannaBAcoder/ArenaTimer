@@ -443,7 +443,7 @@ void checkWiFiConnection() {
     if (currentState != CONNECTING) return;
 
     bool connectionFinished = false;
-    bool connectionFailed = false; 
+    bool connectionFailed = false;
 
     if (WiFi.status() == WL_CONNECTED) {
         static bool serversStarted = false;
@@ -469,7 +469,7 @@ void checkWiFiConnection() {
     else if (millis() - startAttemptTime > 30000) {
         startAPMode();
         connectionFinished = true;
-        connectionFailed = true; 
+        connectionFailed = true;
     }
 
     if (connectionFinished) {
@@ -477,17 +477,26 @@ void checkWiFiConnection() {
         bool clockActive = preferences.getBool("clockActive", false);
         preferences.end();
 
-        currentState = IDLE;
-        setBorder();
+        if (clockActive && !connectionFailed) {
+            currentState = CLOCK_MODE;
+            handleClockMode();
+            setBorder();
+        } else {
+            currentState = IDLE;
+            updateLEDs();
+            setBorder();
+        }
+
+        applyDoubleSidedMirror();
+        needsLEDUpdate = true;
         updateClient();
-        FastLED.show();
 
         if (clockActive && !connectionFailed) {
             Serial.println("[NETWORK] Saved Clock Mode detected. Queuing background calibration...");
             
             xTaskCreate(
                 [](void*) {
-                    vTaskDelay(pdMS_TO_TICKS(500)); 
+                    vTaskDelay(pdMS_TO_TICKS(500));
 
                     Serial.println("[ASYNC TZ] Performing web timezone detection...");
                     HTTPClient http;
@@ -537,21 +546,7 @@ void checkWiFiConnection() {
                         vTaskDelay(pdMS_TO_TICKS(500));
                     }
 
-                    if (TimerTaskHandle != NULL) vTaskSuspend(TimerTaskHandle);
-                    currentState = CLOCK_MODE;
-                    
-                    for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
-                    for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
-                    
-                    handleClockMode();
-                    setBorder();
-                    
-                    applyDoubleSidedMirror();
-                    FastLED.show();
-                    needsLEDUpdate = false;
-                    
-                    if (TimerTaskHandle != NULL) vTaskResume(TimerTaskHandle);
-                    Serial.println("[SYSTEM] Seamless boot transition to Clock Mode complete.");
+                    Serial.println("[SYSTEM] Background clock calibration complete. Main loop tracking time changes.");
 
                     vTaskDelete(NULL); 
                 }, "BootClockTransitionTask", 4096, nullptr, 1, nullptr

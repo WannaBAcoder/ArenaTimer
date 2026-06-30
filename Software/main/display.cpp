@@ -61,6 +61,7 @@ void setChar(char c, int offset, bool inverted) {
     // 7-segment bit pattern font map (A, B, C, D, E, F, G)
     uint8_t segments = 0;
     switch (c) {
+        case '-': segments = 0b0000001; break; // Only turn on Center Segment G
         case 't': segments = 0b0001111; break; // D, E, F, G
         case 'A': segments = 0b1110111; break; // A, B, C, E, F, G
         case 'P': segments = 0b1100111; break; // A, B, E, F, G
