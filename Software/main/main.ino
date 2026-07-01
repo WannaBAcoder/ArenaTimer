@@ -217,8 +217,10 @@ void initNetwork() {
       preferences.begin("settings", false);
       preferences.putUInt("digitColor", hex);
       preferences.end();
-      
+      lockDisplay();
       updateLEDs(); 
+      unlockDisplay();
+
       server.send(200, "text/plain", "Color Saved");
   });
 
@@ -263,6 +265,8 @@ void initNetwork() {
         preferences.putBool("clockActive", true);
         preferences.end();
 
+
+        lockDisplay();
         for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
         for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
 
@@ -290,6 +294,8 @@ void initNetwork() {
         FastLED.show();
         needsLEDUpdate = false;
 
+        unlockDisplay();
+
         if (TimerTaskHandle != NULL) vTaskResume(TimerTaskHandle);
         server.send(200, "text/plain", "Clock Seeded");
     });
@@ -301,7 +307,8 @@ void initNetwork() {
       preferences.end();
       
       needsLEDUpdate = true;
-     
+      
+      lockDisplay();
       if (currentState == CLOCK_MODE) {
           handleClockMode(); 
       } else {
@@ -309,6 +316,9 @@ void initNetwork() {
       }
       
       setBorder();
+
+      unlockDisplay();
+
       server.send(200, "text/plain", displayInverted ? "Inverted" : "Normal");
     });
 
@@ -358,8 +368,12 @@ void handleControl() {
         preferences.begin("settings", false); 
         preferences.putBool("readyRequired", readyRequired); 
         preferences.end(); 
+
+        lockDisplay();
         if(currentState != RUNNING) 
           setBorder(); 
+
+        unlockDisplay();
     } 
     else if (cmd == "tapouttoggle") { 
         String state = server.arg("state"); 
@@ -624,9 +638,11 @@ void setup() {
   initDisplay();
   initNetwork();
   
+  lockDisplay();
   updateLEDs();
   setBorder();
   FastLED.show();
+  unlockDisplay();
 
   pinMode(RESET_BTN, INPUT_PULLUP);
   pinMode(PAUSE_BTN, INPUT_PULLUP);
@@ -650,6 +666,8 @@ void setup() {
         TickType_t lastWakeTime = xTaskGetTickCount();
         while (true) {
           checkAudioTimeout();
+
+          lockDisplay();
           
           switch(currentState) {
             case CONNECTING:
@@ -683,7 +701,10 @@ void setup() {
               FastLED.show();
               needsLEDUpdate = false;
           }
-          vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(1));
+
+          unlockDisplay();
+
+          vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(20));
         }
     },"TimerTask",4096, nullptr, 1, &TimerTaskHandle
   );

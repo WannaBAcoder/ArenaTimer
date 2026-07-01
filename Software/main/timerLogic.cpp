@@ -141,7 +141,7 @@ void checkButtons() {
 
 void handlePausedBlink() {
   unsigned long currentMillis = millis();
-  
+
   if (currentMillis - lastBlinkTime >= blinkInterval) {
     lastBlinkTime = currentMillis;
     blinkState = !blinkState;
@@ -163,6 +163,7 @@ void startPreCountdown() {
   lastScrollTime = millis();
     
   triggerBeep(150);  
+
   for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, ORANGE);
   
   if (!displayInverted) {
@@ -181,13 +182,55 @@ void startPreCountdown() {
   
   needsLEDUpdate = true;
   currentState = PRE_COUNTDOWN_LOOP; 
+  return;
 }
 
 void handlePreCountdownAnimation() {
   unsigned long currentMillis = millis();
-  if (currentMillis - lastScrollTime >= scrollInterval) {
-    lastScrollTime = currentMillis;
+  
+  // Use a stable integer approximation for the 140 LED sweep (1000 / 140 = ~7.14ms)
+  unsigned long targetStep = 8; 
 
+  if (currentMillis - lastScrollTime >= targetStep) {
+    // Calculate exactly how many discrete steps occurred in this 20ms window
+    unsigned long elapsed = currentMillis - lastScrollTime;
+    int stepsToMove = elapsed / targetStep;
+
+    // Advance the tracking clock only by the time we are actually accounting for
+    lastScrollTime += (stepsToMove * targetStep);
+
+    // Apply those discrete steps to the border index
+    for (int i = 0; i < stepsToMove; i++) {
+      scrollIndex--;
+
+      if (scrollIndex < 0) {
+        scrollIndex = BORDER_LED_COUNT - 1;
+        countdown--;
+
+        if (countdown <= 0) {
+          transitionToMatch();
+          return;
+        }
+
+        triggerBeep(150);
+
+        if (!displayInverted) {
+            setDigit(0, 0, false);
+            setDigit(0, 49, false);
+            setColon();
+            setDigit(countdown, 101, true);
+            setDigit(0, 150, true);
+        } else {
+            setDigit(countdown, 0, false);
+            setDigit(0, 49, false);
+            setColon();
+            setDigit(0, 101, true);
+            setDigit(0, 150, true);
+        }
+      }
+    }
+
+    // Draw the final calculated positions to the physical array once
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       if (i >= scrollIndex) {
         setBorderLEDs(i, ORANGE);
@@ -196,38 +239,9 @@ void handlePreCountdownAnimation() {
         setBorderLEDs(i, CRGB::Black);
       }
     }
-
-    scrollIndex--;
-
-    if (scrollIndex < 0) {
-      scrollIndex = BORDER_LED_COUNT - 1;
-      countdown--;
-
-      if (countdown <= 0) {
-        transitionToMatch();
-        return;
-      }
-
-      triggerBeep(150);
-
-      if (!displayInverted) {
-          setDigit(0, 0, false);
-          setDigit(0, 49, false);
-          setColon();
-          setDigit(countdown, 101, true);
-          setDigit(0, 150, true);
-      } else {
-          setDigit(countdown, 0, false);
-          setDigit(0, 49, false);
-          setColon();
-          setDigit(0, 101, true);
-          setDigit(0, 150, true);
-      }
-    }
     needsLEDUpdate = true; 
   }
 }
-
 void updateTimer() {
   unsigned long currentMillis = millis();
 
@@ -292,12 +306,20 @@ void processCommand(String cmd) {
     return; 
   }
   else if (cmd == "pause" && currentState == RUNNING) { 
+    lockDisplay();
     currentState = PAUSED; 
     lastBlinkTime = 0; 
     blinkState = true;
+    
+    updateLEDs();
+    setBorder();
+    needsLEDUpdate = true;
+    unlockDisplay();
+
     triggerBeep(300);
     updateClient();
   } 
+
   else if (cmd == "reset") { 
     if (currentState == FINISHED || currentState == PAUSED || currentState == CLOCK_MODE || currentState == TAPOUT || currentState == IDLE) { 
         Serial.println("[SYSTEM] Executing deep display flush and state reset...");
@@ -313,11 +335,13 @@ void processCommand(String cmd) {
         blinkState = true; 
         tapoutScrollPos = 0;
         tapoutAudioTriggeredThisCycle = false;
-
+        lockDisplay();
         setBorder(); 
         updateLEDs(); 
         updateClient();
         FastLED.show();
+        needsLEDUpdate = false;
+        unlockDisplay();
     }
   } 
   else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING) {
@@ -366,6 +390,7 @@ void processCommand(String cmd) {
 
 void setTeamReady(String team) {
   bool flip = displayInverted;
+  lockDisplay();
   if (team == "Blue") {
       blueReady = true;
       int start = flip ? BORDER_LED_COUNT/2 : 0;
@@ -378,6 +403,7 @@ void setTeamReady(String team) {
       for (int i = start; i < end; i++) setBorderLEDs(i, CRGB::Red);
   }
   needsLEDUpdate = true;
+  unlockDisplay();
 }
 
 void handleClockMode() {

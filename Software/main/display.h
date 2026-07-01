@@ -6,6 +6,8 @@
 
 // Function prototypes
 void initDisplay();
+void lockDisplay();    // <-- Add this
+void unlockDisplay();
 void setDigit(int digit, int offset, bool inverted);
 void setChar(char c, int offset, bool inverted);
 void setColon();
@@ -14,5 +16,6 @@ void setBorder();
 void setDigitLEDs(int index, CRGB color);
 void setBorderLEDs(int index, CRGB color);
 void applyDoubleSidedMirror();
+
 
 #endif

@@ -3,6 +3,8 @@
 extern bool needsLEDUpdate;
 extern bool isDoubleSided;
 
+SemaphoreHandle_t displayMutex = NULL;
+
 // Define the physical arrays here, since they are used by the Display functions
 CRGB digit_physical[DOUBLE_STRIP_LEN];
 CRGB border_physical[DOUBLE_STRIP_LEN];
@@ -16,6 +18,18 @@ void initDisplay() {
     } else {
         FastLED.addLeds<NEOPIXEL, DIGIT_PIN>(digit_physical, PHYSICAL_STRIP_LEN);
         FastLED.addLeds<NEOPIXEL, BORDER_PIN>(border_physical, PHYSICAL_STRIP_LEN);
+    }
+}
+
+void lockDisplay() {
+    if (displayMutex != NULL) {
+        xSemaphoreTake(displayMutex, portMAX_DELAY);
+    }
+}
+
+void unlockDisplay() {
+    if (displayMutex != NULL) {
+        xSemaphoreGive(displayMutex);
     }
 }
 
