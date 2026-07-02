@@ -7,23 +7,16 @@ extern int currentState;
 extern int countdown;
 extern int scrollIndex;
 extern unsigned long lastScrollTime;
-extern unsigned long lastCountdownTime;
 extern bool readyRequired;
 extern bool blueReady;
 extern bool redReady;
 extern volatile bool needsLEDUpdate;
 extern bool tapoutInitiatorIsBlue;
 
+unsigned long lastCountdownTime = 0;
+
 bool buzzState = 0;
 bool relayState = 0;
-
-// Debounce variables for each button
-unsigned long lastDebounceTimeStart = 0;
-unsigned long lastDebounceTimePause = 0;
-unsigned long lastDebounceTimeReset = 0;
-unsigned long lastDebounceTimeTimeSel = 0;
-unsigned long lastDebounceTimeBlue = 0;
-unsigned long lastDebounceTimeRed = 0;
 
 extern bool audioEnabled;
 extern uint8_t audioOutputSelect;
@@ -33,8 +26,6 @@ extern bool beepActive;
 bool blinkState = true;
 unsigned long lastBlinkTime = 0;
 const unsigned long blinkInterval = 500; // Blink every 500ms
-
-extern TaskHandle_t TimerTaskHandle;
 
 unsigned long lastPatternTick = 0;
 uint8_t patternStep = 0;
@@ -49,7 +40,6 @@ extern CRGB border_physical[];
 void handleConnectingAnimation() {
   static unsigned long lastAnimTime = 0;
   static bool borderOn = true;
-  const uint16_t blinkInterval = 500; // Blink every 500ms
 
   if (millis() - lastAnimTime >= 30) {
     lastAnimTime = millis();
@@ -188,18 +178,14 @@ void startPreCountdown() {
 void handlePreCountdownAnimation() {
   unsigned long currentMillis = millis();
   
-  // Use a stable integer approximation for the 140 LED sweep (1000 / 140 = ~7.14ms)
   unsigned long targetStep = 8; 
 
   if (currentMillis - lastScrollTime >= targetStep) {
-    // Calculate exactly how many discrete steps occurred in this 20ms window
     unsigned long elapsed = currentMillis - lastScrollTime;
     int stepsToMove = elapsed / targetStep;
 
-    // Advance the tracking clock only by the time we are actually accounting for
     lastScrollTime += (stepsToMove * targetStep);
 
-    // Apply those discrete steps to the border index
     for (int i = 0; i < stepsToMove; i++) {
       scrollIndex--;
 
@@ -230,7 +216,6 @@ void handlePreCountdownAnimation() {
       }
     }
 
-    // Draw the final calculated positions to the physical array once
     for (int i = 0; i < BORDER_LED_COUNT; i++) {
       if (i >= scrollIndex) {
         setBorderLEDs(i, ORANGE);
@@ -242,6 +227,7 @@ void handlePreCountdownAnimation() {
     needsLEDUpdate = true; 
   }
 }
+
 void updateTimer() {
   unsigned long currentMillis = millis();
 
@@ -306,7 +292,6 @@ void processCommand(String cmd) {
     return; 
   }
   else if (cmd == "pause" && currentState == RUNNING) { 
-    lockDisplay();
     currentState = PAUSED; 
     lastBlinkTime = 0; 
     blinkState = true;
@@ -314,7 +299,6 @@ void processCommand(String cmd) {
     updateLEDs();
     setBorder();
     needsLEDUpdate = true;
-    unlockDisplay();
 
     triggerBeep(300);
     updateClient();
@@ -335,13 +319,12 @@ void processCommand(String cmd) {
         blinkState = true; 
         tapoutScrollPos = 0;
         tapoutAudioTriggeredThisCycle = false;
-        lockDisplay();
         setBorder(); 
         updateLEDs(); 
         updateClient();
+        applyDoubleSidedMirror();
         FastLED.show();
         needsLEDUpdate = false;
-        unlockDisplay();
     }
   } 
   else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING) {
@@ -390,7 +373,6 @@ void processCommand(String cmd) {
 
 void setTeamReady(String team) {
   bool flip = displayInverted;
-  lockDisplay();
   if (team == "Blue") {
       blueReady = true;
       int start = flip ? BORDER_LED_COUNT/2 : 0;
@@ -403,7 +385,6 @@ void setTeamReady(String team) {
       for (int i = start; i < end; i++) setBorderLEDs(i, CRGB::Red);
   }
   needsLEDUpdate = true;
-  unlockDisplay();
 }
 
 void handleClockMode() {

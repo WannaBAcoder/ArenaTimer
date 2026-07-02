@@ -6,6 +6,17 @@
 #include "config.h"
 #include "display.h"
 #include "timerLogic.h"
+#include <queue>
+#include <ElegantOTA.h>
+
+std::queue<String> commandQueue;
+portMUX_TYPE queueMux = portMUX_INITIALIZER_UNLOCKED;
+
+void queueCommand(String cmd) {
+    portENTER_CRITICAL(&queueMux);
+    commandQueue.push(cmd);
+    portEXIT_CRITICAL(&queueMux);
+}
 
 Preferences preferences;
 
@@ -31,8 +42,6 @@ uint8_t redMAC[6], blueMAC[6], judgeMAC[6];
 bool redPaired = false, bluePaired = false, judgePaired = false;
 struct_message incoming;
 
-unsigned long lastCountdownTime = 0;
-
 int countdown = 3; //number of seconds until match start
 
 int scrollIndex = 0;
@@ -56,8 +65,6 @@ bool beepActive = false;
 // main.ino Globals
 CRGB digitColor = CRGB::Red; // Default
 uint8_t systemBrightness = 127;
-
-TaskHandle_t TimerTaskHandle = NULL;
 
 bool isDoubleSided = true;
 
@@ -108,10 +115,10 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
     // Validate that this packet came from the paired Judge Remote
     if (judgePaired && memcmp(mac, judgeMAC, 6) == 0) {
         switch(incoming.buttonID) { 
-            case 1: processCommand("start");   break; 
-            case 2: processCommand("pause");   break; 
-            case 3: processCommand("reset");   break; 
-            case 4: processCommand("switch");  break;
+            case 1: queueCommand("start");   break; 
+            case 2: queueCommand("pause");   break; 
+            case 3: queueCommand("reset");   break; 
+            case 4: queueCommand("switch");  break;
             case 5: 
                 if (audioEnabled && remoteAudioEnabled) {
                     triggerBeep(250);
@@ -205,24 +212,33 @@ void initNetwork() {
     });
 
     server.on("/setcolor", []() {
-      if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
-          server.send(403, "text/plain", "Locked during match");
-          return;
-      }
+        if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
+            server.send(403, "text/plain", "Locked during match");
+            return;
+        }
 
-      String hexStr = server.arg("hex");
-      uint32_t hex = strtol(hexStr.c_str(), NULL, 16);
-      digitColor = CRGB(hex);
-      
-      preferences.begin("settings", false);
-      preferences.putUInt("digitColor", hex);
-      preferences.end();
-      lockDisplay();
-      updateLEDs(); 
-      unlockDisplay();
+        String hexStr = server.arg("hex");
+        uint32_t hex = strtol(hexStr.c_str(), NULL, 16);
+        
+        uint8_t r = (hex >> 16) & 0xFF;
+        uint8_t g = (hex >> 8)  & 0xFF;
+        uint8_t b = hex & 0xFF;
 
-      server.send(200, "text/plain", "Color Saved");
-  });
+        if (r > 180 && g > 180 && b > 180) {
+            Serial.println("[SAFETY] Blinding near-white color detected. Saving and applying as a soft gray floor.");
+            hex = 0x323232;
+        }
+
+        digitColor = CRGB(hex);
+        
+        preferences.begin("settings", false);
+        preferences.putUInt("digitColor", hex);
+        preferences.end();
+        
+        updateLEDs();
+
+        server.send(200, "text/plain", "Color Processed & Saved");
+    });
 
     server.on("/setbrightness", []() {
       if (currentState == RUNNING || currentState == PAUSED || currentState == PRE_COUNTDOWN_LOOP) {
@@ -258,7 +274,6 @@ void initNetwork() {
         struct timeval now = { .tv_sec = t };
         settimeofday(&now, NULL);
         
-        if (TimerTaskHandle != NULL) vTaskSuspend(TimerTaskHandle);
         currentState = CLOCK_MODE;
 
         preferences.begin("settings", false);
@@ -266,7 +281,6 @@ void initNetwork() {
         preferences.end();
 
 
-        lockDisplay();
         for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
         for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
 
@@ -294,9 +308,6 @@ void initNetwork() {
         FastLED.show();
         needsLEDUpdate = false;
 
-        unlockDisplay();
-
-        if (TimerTaskHandle != NULL) vTaskResume(TimerTaskHandle);
         server.send(200, "text/plain", "Clock Seeded");
     });
 
@@ -308,7 +319,6 @@ void initNetwork() {
       
       needsLEDUpdate = true;
       
-      lockDisplay();
       if (currentState == CLOCK_MODE) {
           handleClockMode(); 
       } else {
@@ -316,8 +326,6 @@ void initNetwork() {
       }
       
       setBorder();
-
-      unlockDisplay();
 
       server.send(200, "text/plain", displayInverted ? "Inverted" : "Normal");
     });
@@ -342,6 +350,7 @@ void initNetwork() {
     });
 
     webSocket.onEvent(onWebSocketEvent);
+    ElegantOTA.begin(&server);
     webSocket.begin();
     server.begin();
     Serial.println("[SYSTEM] HTTP Server and WebSocket Started");
@@ -369,11 +378,8 @@ void handleControl() {
         preferences.putBool("readyRequired", readyRequired); 
         preferences.end(); 
 
-        lockDisplay();
         if(currentState != RUNNING) 
           setBorder(); 
-
-        unlockDisplay();
     } 
     else if (cmd == "tapouttoggle") { 
         String state = server.arg("state"); 
@@ -386,7 +392,7 @@ void handleControl() {
         Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED"); 
     } 
     else {
-        processCommand(cmd); 
+        queueCommand(cmd); 
     }
     server.send(200, "text/plain", "OK"); 
 }
@@ -462,8 +468,6 @@ void checkWiFiConnection() {
     if (WiFi.status() == WL_CONNECTED) {
         static bool serversStarted = false;
         if (!serversStarted) {
-            server.on("/", handleRoot);
-            server.on("/control", handleControl);
             server.begin();
             webSocket.begin();
             webSocket.onEvent(onWebSocketEvent);
@@ -480,8 +484,11 @@ void checkWiFiConnection() {
         }
         connectionFinished = true;
     } 
-    else if (millis() - startAttemptTime > 30000) {
+    else if (millis() - startAttemptTime > 15000) {
         startAPMode();
+        preferences.begin("settings", false);
+        preferences.putBool("clockActive", false);
+        preferences.end();
         connectionFinished = true;
         connectionFailed = true;
     }
@@ -493,9 +500,61 @@ void checkWiFiConnection() {
 
         if (clockActive && !connectionFailed) {
             currentState = CLOCK_MODE;
+
+            Serial.println("[SYSTEM] Performing sequential inline timezone detection...");
+            HTTPClient http;
+            http.setTimeout(2500); 
+            http.begin("http://worldtimeapi.org/api/ip.txt");
+            
+            int httpCode = http.GET();
+            String posixString = "";
+            
+            if (httpCode == HTTP_CODE_OK) {
+                String payload = http.getString();
+                int tzOffsetIdx = payload.indexOf("utc_offset: ");
+                
+                if (tzOffsetIdx != -1) {
+                    int startOffset = tzOffsetIdx + 12;
+                    int endOffset = payload.indexOf('\n', startOffset);
+                    String rawOffset = payload.substring(startOffset, endOffset);
+                    rawOffset.trim();
+                    
+                    int hoursOffset = rawOffset.substring(1, 3).toInt();
+                    char sign = rawOffset.charAt(0);
+                    
+                    if (sign == '-') {
+                        posixString = "GMT" + String(hoursOffset);
+                    } else {
+                        posixString = "GMT-" + String(hoursOffset);
+                    }
+                    
+                    if (payload.indexOf("America/") != -1) {
+                        int dstOffset = hoursOffset - 1;
+                        posixString += "GMT+" + String(dstOffset) + ",M3.2.0,M11.1.0";
+                    }
+                }
+            }
+            http.end();
+
+            if (posixString.length() > 0) {
+                Serial.printf("[SYSTEM] Found region rule inline: %s\n", posixString.c_str());
+                setenv("TZ", posixString.c_str(), 1);
+                tzset();
+            } else {
+                Serial.println("[SYSTEM] Network lookup failed or timed out. Falling back to Central Time.");
+                setenv("TZ", "CST6CDT,M3.2.0,M11.1.0", 1);
+                tzset();
+            }
+
+            struct tm timeinfo;
+            if (getLocalTime(&timeinfo)) {
+                Serial.println("[SYSTEM] Inline clock calibration complete.");
+            }
+
             handleClockMode();
             setBorder();
-        } else {
+        } 
+        else {
             currentState = IDLE;
             updateLEDs();
             setBorder();
@@ -504,71 +563,10 @@ void checkWiFiConnection() {
         applyDoubleSidedMirror();
         needsLEDUpdate = true;
         updateClient();
-
-        if (clockActive && !connectionFailed) {
-            Serial.println("[NETWORK] Saved Clock Mode detected. Queuing background calibration...");
-            
-            xTaskCreate(
-                [](void*) {
-                    vTaskDelay(pdMS_TO_TICKS(500));
-
-                    Serial.println("[ASYNC TZ] Performing web timezone detection...");
-                    HTTPClient http;
-                    http.setTimeout(4000); 
-                    http.begin("http://worldtimeapi.org/api/ip.txt");
-                    
-                    int httpCode = http.GET();
-                    String posixString = "";
-                    
-                    if (httpCode == HTTP_CODE_OK) {
-                        String payload = http.getString();
-                        int tzOffsetIdx = payload.indexOf("utc_offset: ");
-                        if (tzOffsetIdx != -1) {
-                            int startOffset = tzOffsetIdx + 12;
-                            int endOffset = payload.indexOf('\n', startOffset);
-                            String rawOffset = payload.substring(startOffset, endOffset);
-                            rawOffset.trim();
-                            
-                            int hoursOffset = rawOffset.substring(1, 3).toInt();
-                            char sign = rawOffset.charAt(0);
-                            
-                            if (sign == '-') {
-                                posixString = "GMT" + String(hoursOffset);
-                            } else {
-                                posixString = "GMT-" + String(hoursOffset);
-                            }
-                            
-                            if (payload.indexOf("America/") != -1) {
-                                int dstOffset = hoursOffset - 1;
-                                posixString += "GMT+" + String(dstOffset) + ",M3.2.0,M11.1.0";
-                            }
-                        }
-                    }
-                    http.end();
-
-                    if (posixString.length() > 0) {
-                        Serial.printf("[ASYNC TZ] Found matching region rule: %s\n", posixString.c_str());
-                        setenv("TZ", posixString.c_str(), 1);
-                        tzset();
-                    } else {
-                        Serial.println("[ASYNC TZ] Network timeout. Staying with Central Time rule.");
-                    }
-
-                    struct tm timeinfo;
-                    unsigned long startWait = millis();
-                    while (!getLocalTime(&timeinfo) && (millis() - startWait < 8000)) {
-                        vTaskDelay(pdMS_TO_TICKS(500));
-                    }
-
-                    Serial.println("[SYSTEM] Background clock calibration complete. Main loop tracking time changes.");
-
-                    vTaskDelete(NULL); 
-                }, "BootClockTransitionTask", 4096, nullptr, 1, nullptr
-            );
-        } 
-        else if (connectionFailed) {
-            Serial.println("[SYSTEM WARNING] WiFi Connection failed! Gating in IDLE mode on Access Point hotspot.");
-        }
+        
+    } 
+    else if (connectionFailed) {
+        Serial.println("[SYSTEM WARNING] WiFi Connection failed! Gating in IDLE mode on Access Point hotspot.");
     }
 }
 
@@ -638,11 +636,9 @@ void setup() {
   initDisplay();
   initNetwork();
   
-  lockDisplay();
   updateLEDs();
   setBorder();
   FastLED.show();
-  unlockDisplay();
 
   pinMode(RESET_BTN, INPUT_PULLUP);
   pinMode(PAUSE_BTN, INPUT_PULLUP);
@@ -659,67 +655,67 @@ void setup() {
     }
     
   esp_now_register_recv_cb(OnDataRecv);
-    
-  xTaskCreate(
-    [](void*) {
-        // Core loop state execution
-        TickType_t lastWakeTime = xTaskGetTickCount();
-        while (true) {
-          checkAudioTimeout();
 
-          lockDisplay();
-          
-          switch(currentState) {
-            case CONNECTING:
-              handleConnectingAnimation();
-              checkWiFiConnection();
-            break;
-            case PRE_COUNTDOWN_INIT:
-              startPreCountdown();
-            break;
-            case PRE_COUNTDOWN_LOOP:
-              handlePreCountdownAnimation();
-            break;
-            case RUNNING:
-              updateTimer();
-            break;
-            case PAUSED:
-              handlePausedBlink();
-            break;
-            case FINISHED:
-            break;
-            case CLOCK_MODE:
-              handleClockMode();
-            break;
-            case TAPOUT:
-              handleTapoutAnimation();
-            break;
-          }
-
-          if (needsLEDUpdate) {
-              applyDoubleSidedMirror();
-              FastLED.show();
-              needsLEDUpdate = false;
-          }
-
-          unlockDisplay();
-
-          vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(20));
-        }
-    },"TimerTask",4096, nullptr, 1, &TimerTaskHandle
-  );
-
-  xTaskCreate(
-    [](void*) {
-        while (true) {
-            checkButtons();
-            vTaskDelay(pdMS_TO_TICKS(50));
-        }
-    },"ButtonCheckTask",2048,nullptr,1,nullptr
-  );
 }
 
 void loop() {
+  static uint32_t lastFrameTime = 0;
+  uint32_t currentMillis = millis();
+
   server.handleClient();
   webSocket.loop();
+  ElegantOTA.loop(); 
+
+  if (currentMillis - lastFrameTime >= 20) {
+    lastFrameTime = currentMillis;
+
+    checkAudioTimeout();
+
+    checkButtons();
+
+    String nextCmd = "";
+    portENTER_CRITICAL(&queueMux);
+    if (!commandQueue.empty()) {
+        nextCmd = commandQueue.front();
+        commandQueue.pop();
+    }
+    portEXIT_CRITICAL(&queueMux);
+
+    if (nextCmd != "") {
+        processCommand(nextCmd); 
+    }
+
+    switch(currentState) {
+      case CONNECTING:
+        handleConnectingAnimation();
+        checkWiFiConnection();
+      break;
+      case PRE_COUNTDOWN_INIT:
+        startPreCountdown();
+      break;
+      case PRE_COUNTDOWN_LOOP:
+        handlePreCountdownAnimation(); 
+      break;
+      case RUNNING:
+        updateTimer();
+      break;
+      case PAUSED:
+        handlePausedBlink();
+      break;
+      case FINISHED:
+      break;
+      case CLOCK_MODE:
+        handleClockMode();
+      break;
+      case TAPOUT:
+        handleTapoutAnimation();
+      break;
+    }
+
+    if (needsLEDUpdate) {
+        applyDoubleSidedMirror();
+        FastLED.show();
+        needsLEDUpdate = false;
+    }
+  }
 }

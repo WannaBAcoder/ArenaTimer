@@ -35,8 +35,12 @@ const char* html = R"rawliteral(
         
         <div id="timerControls">
             <div id="manualTimeSection" style="margin-bottom: 20px;">
-                <input type="number" id="manualMin" placeholder="MM"> :
-                <input type="number" id="manualSec" placeholder="SS">
+                <input type="number" id="manualMin" min="0" max="60" 
+                    oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null" 
+                    placeholder="MM"> :
+                <input type="number" id="manualSec" min="0" max="60" 
+                    oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null" 
+                    placeholder="SS">
                 <button id="setTimeBtn" class="small-btn" onclick="applyTime()" style="background:green; color:white;">Set Time</button>
             </div>
             

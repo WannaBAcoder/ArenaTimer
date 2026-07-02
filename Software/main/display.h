@@ -6,8 +6,6 @@
 
 // Function prototypes
 void initDisplay();
-void lockDisplay();    // <-- Add this
-void unlockDisplay();
 void setDigit(int digit, int offset, bool inverted);
 void setChar(char c, int offset, bool inverted);
 void setColon();

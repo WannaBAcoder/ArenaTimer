@@ -24,7 +24,7 @@
 #define DIGIT_LED_COUNT 202
 #define BORDER_LED_COUNT 140
 #define LEFT_BORDER 0
-#define RIGHT_BOARDER 70
+#define RIGHT_BORDER 70
 #define ORANGE CRGB(255, 50, 0)
 
 // Strip calculation constants
@@ -62,7 +62,6 @@ extern bool redPaired, bluePaired, judgePaired;
 // Add these to Config.h
 extern int current_time;
 extern bool readyRequired;
-extern bool preCountdownRunning;
 
 extern int countdown_time;
 extern bool blueReady;
