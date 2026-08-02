@@ -8,7 +8,7 @@
 #include <time.h>
 
 // Pin assignments
-#define RESET_BTN 12
+#define RESET_BTN 15
 #define PAUSE_BTN 14
 #define START_BTN 27
 #define TIME_SEL_SW 13
