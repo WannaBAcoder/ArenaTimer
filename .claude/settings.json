@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pio pkg *)",
+      "Bash(code *)"
+    ]
+  }
+}

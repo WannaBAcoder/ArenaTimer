@@ -1,0 +1,16 @@
+Import("env")
+
+# The espressif32 (pioarduino) build script silently downgrades any board
+# requesting qio/qout flash mode down to dio (see its builder/main.py,
+# _get_board_flash_mode) as a conservative default for boards it can't
+# verify QIO wiring on. This board is a confirmed-good QIO part: the
+# original Arduino IDE build used FlashMode=qio successfully for a long
+# time. Restore the real setting so the image header (and therefore the
+# chip's actual runtime SPI flash read mode) matches that known-good config.
+
+
+def _force_qio_flash_mode(*args, **kwargs):
+    return "qio"
+
+
+env.Replace(__get_board_flash_mode=_force_qio_flash_mode)

@@ -276,7 +276,7 @@ void transitionToMatch() {
 }
 
 void processCommand(String cmd) {
-  Serial.printf("[ENGINE DEBUG] processCommand received tracking request: '%s' | Current State is: %d\n", cmd.c_str(), currentState);
+  DEBUG_LOG("[ENGINE DEBUG] processCommand received tracking request: '%s' | Current State is: %d\n", cmd.c_str(), currentState);
 
   if (cmd == "start") { 
     if (currentState == IDLE || currentState == PAUSED) { 
@@ -341,8 +341,14 @@ void processCommand(String cmd) {
         Serial.printf("[SYSTEM IGNORE] %s pressed button, but Tapouts are DISABLED.\n", (cmd == "tapoutBlue") ? "Blue" : "Red");
     }
   }
+  else if (cmd == "readyRed") {
+    setTeamReady("Red");
+  }
+  else if (cmd == "readyBlue") {
+    setTeamReady("Blue");
+  }
 
-  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) { 
+  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) {
     countdown_time = (countdown_time == 120) ? 180 : 120; 
     current_time = countdown_time; 
     bool newTimeSelState = (countdown_time == 180); 

@@ -7,6 +7,16 @@
 #include <esp_now.h> // Add this include
 #include <time.h>
 
+// Verbose per-event debug logging (every button press, every command, every
+// ESP-NOW packet). Controlled by ENABLE_DEBUG_LOG (see platformio.ini) so it
+// can be compiled out for quieter/slightly faster event-day builds without
+// touching source. Defaults to on, matching prior always-on behavior.
+#ifdef ENABLE_DEBUG_LOG
+  #define DEBUG_LOG(...) Serial.printf(__VA_ARGS__)
+#else
+  #define DEBUG_LOG(...)
+#endif
+
 // Pin assignments
 #define RESET_BTN 15
 #define PAUSE_BTN 14
