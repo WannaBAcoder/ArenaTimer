@@ -4,11 +4,10 @@
 #include <Arduino.h>
 #include <FastLED.h>
 #include <Preferences.h>
-#include <esp_now.h> // Add this include
 #include <time.h>
 
 // Verbose per-event debug logging (every button press, every command, every
-// ESP-NOW packet). Controlled by ENABLE_DEBUG_LOG (see platformio.ini) so it
+// LoRa packet). Controlled by ENABLE_DEBUG_LOG (see platformio.ini) so it
 // can be compiled out for quieter/slightly faster event-day builds without
 // touching source. Defaults to on, matching prior always-on behavior.
 #ifdef ENABLE_DEBUG_LOG
@@ -28,6 +27,12 @@
 #define BUZZ_PIN 18
 #define RELAY_PIN 21
 
+// RA-08H LoRa module (replaces ESP-NOW), see PCB Files/ESP32_Lora netlist.
+// UART2: GPIO23 TX (-> module LPRXD), GPIO22 RX (<- module TXD).
+#define RADIO_RST_PIN 12
+#define RADIO_UART_TX 23
+#define RADIO_UART_RX 22
+
 // LED pin assignments
 #define DIGIT_PIN   5
 #define BORDER_PIN  17
@@ -42,9 +47,6 @@
 #define HALF_BORDER (BORDER_LED_COUNT / 2)
 #define PHYSICAL_STRIP_LEN (HALF_DIGIT + HALF_BORDER)
 
-// Hardware selection pin (Short to GND for Single-Sided Mode)
-#define HW_VARIANT_PIN 22
-
 // Double-sided absolute memory buffer requirement
 #define DOUBLE_STRIP_LEN (PHYSICAL_STRIP_LEN * 2)
 
@@ -58,12 +60,6 @@ extern Preferences preferences;
 // Constants
 const float scrollInterval = 1000.0 / BORDER_LED_COUNT;
 const unsigned long debounceDelay = 200;
-
-// Add the struct definition
-typedef struct struct_message {
-    char deviceType[15];
-    int buttonID;
-} __attribute__((packed)) struct_message;
 
 // Add these to your "Global Objects" or "Constants" section
 extern bool pairingMode;
@@ -109,5 +105,12 @@ void starPreCountdown(); // Defined in TimerLogic
 void updateClient();     // Defined in Network
 void updateLEDs();       // Defined in Display
 void setBorder();        // Defined in Display
+void queueCommand(const char* cmd); // Defined in main.cpp
+
+// Defined in loraRemotes.cpp
+void loraInit();
+void loraPoll();
+void loraLoadSavedRemotes();
+void clearRemotes();
 
 #endif
