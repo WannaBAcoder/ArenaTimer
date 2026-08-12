@@ -9246,7 +9246,7 @@
 		)
 		(uuid "b1b4a2f7-4a5f-40c2-bd50-826addd0b64c")
 	)
-	(label "RADIO_RST"
+	(label "D12"
 		(at 53.34 227.33 0)
 		(effects
 			(font
@@ -9256,7 +9256,7 @@
 		)
 		(uuid "b3a77d86-cf71-402a-9ae4-f3d0607538d1")
 	)
-	(label "D34"
+	(label "RADIO_RST"
 		(at 53.34 207.01 0)
 		(effects
 			(font
@@ -9326,7 +9326,7 @@
 		)
 		(uuid "d1a94d7f-e9d8-46f3-a385-d11319b33c82")
 	)
-	(label "D34"
+	(label "RADIO_RST"
 		(at 386.08 205.74 180)
 		(effects
 			(font
@@ -9376,7 +9376,7 @@
 		)
 		(uuid "de1fb9b5-0d83-46b6-a445-655b5d6d31d0")
 	)
-	(label "RADIO_RST"
+	(label "D12"
 		(at 386.08 165.1 180)
 		(effects
 			(font
@@ -11172,6 +11172,110 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 215.9 204.47 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "3f43f4d4-d5dd-4340-b346-c1fe0d141e43")
+		(property "Reference" "C11"
+			(at 219.71 203.1999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10uF, 25V"
+			(at 219.71 205.7399 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 216.8652 208.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 215.9 204.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 215.9 204.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C96446"
+			(at 215.9 204.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 215.9 204.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ea8e4ec0-9d17-428d-ac2c-da0786ae0cdb")
+		)
+		(pin "2"
+			(uuid "9a4aaf95-73d9-4020-bfae-366e8f47de3b")
+		)
+		(instances
+			(project "ESP32_Lora"
+				(path "/3ea10677-c582-47a8-bbd3-817c5fa3f1e5"
+					(reference "C11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:LED")
 		(at 394.97 170.18 90)
 		(unit 1)
@@ -11848,110 +11952,6 @@
 			(project "ESP32_Lora"
 				(path "/3ea10677-c582-47a8-bbd3-817c5fa3f1e5"
 					(reference "#PWR094")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 215.9 204.47 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "4f7d759d-4ed9-4a1d-83ef-b6b192b7e224")
-		(property "Reference" "C11"
-			(at 219.71 203.1999 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "100nF"
-			(at 219.71 205.7399 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 216.8652 208.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 215.9 204.47 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 215.9 204.47 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C1525"
-			(at 215.9 204.47 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" ""
-			(at 215.9 204.47 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "1fec9710-39f6-4e4d-8a63-5171ee0fcc57")
-		)
-		(pin "2"
-			(uuid "04b66197-1235-493a-a739-a0dd2c07c3b5")
-		)
-		(instances
-			(project "ESP32_Lora"
-				(path "/3ea10677-c582-47a8-bbd3-817c5fa3f1e5"
-					(reference "C11")
 					(unit 1)
 				)
 			)

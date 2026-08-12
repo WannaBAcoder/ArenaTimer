@@ -29,7 +29,7 @@
 
 // RA-08H LoRa module (replaces ESP-NOW), see PCB Files/ESP32_Lora netlist.
 // UART2: GPIO23 TX (-> module LPRXD), GPIO22 RX (<- module TXD).
-#define RADIO_RST_PIN 12
+#define RADIO_RST_PIN 25
 #define RADIO_UART_TX 23
 #define RADIO_UART_RX 22
 
