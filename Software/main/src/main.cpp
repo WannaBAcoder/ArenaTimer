@@ -562,7 +562,6 @@ void setup() {
   pinMode(RELAY_PIN, OUTPUT);
 
   loraInit();
-  white(1);
 }
 
 void loop() {

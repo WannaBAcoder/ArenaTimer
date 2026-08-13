@@ -1229,172 +1229,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Jumper:Jumper_2_Bridged"
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(in_pos_files yes)
-			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "JP"
-				(at 0 1.905 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "Jumper_2_Bridged"
-				(at 0 -2.54 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 -5.08 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Description" "Jumper, 2-pole, closed/bridged"
-				(at 0 -7.62 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "Jumper SPST"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_fp_filters" "Jumper* TestPoint*2Pads* TestPoint*Bridge*"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(symbol "Jumper_2_Bridged_0_0"
-				(circle
-					(center -2.032 0)
-					(radius 0.508)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(circle
-					(center 2.032 0)
-					(radius 0.508)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "Jumper_2_Bridged_0_1"
-				(arc
-					(start -1.524 0.254)
-					(mid 0 0.762)
-					(end 1.524 0.254)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "Jumper_2_Bridged_1_1"
-				(pin passive line
-					(at -5.08 0 0)
-					(length 2.54)
-					(name "A"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 0 180)
-					(length 2.54)
-					(name "B"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "MCU_ST_STM32G0:STM32G030K6Tx"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -3698,7 +3532,7 @@
 		)
 		(uuid "0b2974d7-5ca0-40a3-99ed-aa24f9057238")
 	)
-	(text "Programmer"
+	(text "STM32 Programmer"
 		(exclude_from_sim no)
 		(at 253.238 225.552 0)
 		(effects
@@ -3709,6 +3543,18 @@
 			)
 		)
 		(uuid "2a9d2261-9f8c-47da-894d-d39ac70236f4")
+	)
+	(text "Radio Programmer"
+		(exclude_from_sim no)
+		(at 254.508 182.372 0)
+		(effects
+			(font
+				(size 5.08 5.08)
+				(thickness 1.016)
+				(bold yes)
+			)
+		)
+		(uuid "56e9e2be-be0b-4d93-b6c8-b7f199cc9d02")
 	)
 	(text "https://www.ti.com/lit/an/swra730/swra730.pdf"
 		(exclude_from_sim no)
@@ -3901,6 +3747,10 @@
 		(uuid "ec66aa49-ab6e-47cc-a556-0e2640811fb7")
 	)
 	(no_connect
+		(at 245.11 198.12)
+		(uuid "05e54f3d-dd52-4ee1-98bf-56b1b602a6a4")
+	)
+	(no_connect
 		(at 109.22 135.89)
 		(uuid "0c7ad63a-aac0-4047-bad5-48850890ef44")
 	)
@@ -3973,10 +3823,6 @@
 		(uuid "a2cdd8eb-7be1-4f34-99b5-864f8ad9786d")
 	)
 	(no_connect
-		(at 240.03 152.4)
-		(uuid "a70e42b7-ddb3-4e92-b138-03e9f73c3549")
-	)
-	(no_connect
 		(at 214.63 147.32)
 		(uuid "b0b14f4c-3f25-4798-bb76-da5461e7cf4f")
 	)
@@ -4013,6 +3859,26 @@
 			(type default)
 		)
 		(uuid "0037dcaa-4f01-41b2-b4bd-71f95692eb0c")
+	)
+	(wire
+		(pts
+			(xy 245.11 200.66) (xy 260.35 200.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "027a859f-342f-42a5-843d-ff7ffdc6f774")
+	)
+	(wire
+		(pts
+			(xy 245.11 203.2) (xy 260.35 203.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0648783c-0fc1-4fd3-bdbe-0b75ba9fe3b4")
 	)
 	(wire
 		(pts
@@ -4106,6 +3972,16 @@
 	)
 	(wire
 		(pts
+			(xy 245.11 208.28) (xy 247.65 208.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "13dc93f2-9181-4328-83e4-91222bcc8b77")
+	)
+	(wire
+		(pts
 			(xy 22.86 238.76) (xy 34.29 238.76)
 		)
 		(stroke
@@ -4173,6 +4049,16 @@
 			(type default)
 		)
 		(uuid "171d0276-0199-4714-9f22-dff9e5be3126")
+	)
+	(wire
+		(pts
+			(xy 254 195.58) (xy 254 193.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "19be2704-7157-4617-ade6-67458e94eb8f")
 	)
 	(wire
 		(pts
@@ -4263,6 +4149,16 @@
 			(type default)
 		)
 		(uuid "2d772ece-a41d-4029-8314-8ecaba052168")
+	)
+	(wire
+		(pts
+			(xy 247.65 208.28) (xy 247.65 210.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2f8444fa-07c0-43f6-880a-71d6431ad3a8")
 	)
 	(wire
 		(pts
@@ -4466,6 +4362,16 @@
 	)
 	(wire
 		(pts
+			(xy 194.31 133.35) (xy 194.31 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "550ecbb0-bb98-487b-b93f-2407bece4b48")
+	)
+	(wire
+		(pts
 			(xy 144.78 138.43) (xy 158.75 138.43)
 		)
 		(stroke
@@ -4566,6 +4472,16 @@
 	)
 	(wire
 		(pts
+			(xy 245.11 195.58) (xy 254 195.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "70b681c2-41ee-4a9d-85e0-c748de01af16")
+	)
+	(wire
+		(pts
 			(xy 144.78 130.81) (xy 158.75 130.81)
 		)
 		(stroke
@@ -4573,6 +4489,16 @@
 			(type default)
 		)
 		(uuid "777aa3b3-5963-45c0-b567-9688671eb373")
+	)
+	(wire
+		(pts
+			(xy 245.11 205.74) (xy 260.35 205.74)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7870356b-6223-4ec1-a0d4-4ba90b989106")
 	)
 	(wire
 		(pts
@@ -4713,6 +4639,16 @@
 			(type default)
 		)
 		(uuid "8f53bcb3-23f0-43c5-99ab-f76ce3131670")
+	)
+	(wire
+		(pts
+			(xy 240.03 152.4) (xy 255.27 152.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "902be917-0975-418a-94c7-7883bfbed2cb")
 	)
 	(wire
 		(pts
@@ -4866,13 +4802,13 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 133.35) (xy 182.88 135.89)
+			(xy 194.31 144.78) (xy 194.31 143.51)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "ac742cc9-fdb6-43c7-95bf-a7f42430d388")
+		(uuid "b2893243-abe7-4a48-94de-1739b5ccc167")
 	)
 	(wire
 		(pts
@@ -4893,16 +4829,6 @@
 			(type default)
 		)
 		(uuid "b4439f2d-6397-40b5-bb46-2f67bc59ed49")
-	)
-	(wire
-		(pts
-			(xy 194.31 133.35) (xy 214.63 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b50f16a7-d933-4948-b3d4-37b532a629f3")
 	)
 	(wire
 		(pts
@@ -4973,6 +4899,16 @@
 			(type default)
 		)
 		(uuid "cd0c33b3-731b-4f81-bfb9-378f1b25de81")
+	)
+	(wire
+		(pts
+			(xy 194.31 133.35) (xy 214.63 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cd47fbf3-4026-494e-a9bc-222dd9443497")
 	)
 	(wire
 		(pts
@@ -5106,16 +5042,6 @@
 	)
 	(wire
 		(pts
-			(xy 184.15 133.35) (xy 182.88 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ed104609-7a7b-48f3-a583-a6958d4ca688")
-	)
-	(wire
-		(pts
 			(xy 31.75 43.18) (xy 31.75 45.72)
 		)
 		(stroke
@@ -5163,6 +5089,26 @@
 			(type default)
 		)
 		(uuid "f9a9869c-6eb0-4d4d-88e7-2e75daec9891")
+	)
+	(label "RADIO_BOOT"
+		(at 200.66 133.35 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "05fd3757-70bf-481e-842b-289c87c7d7ca")
+	)
+	(label "RADIO_UART_TX"
+		(at 255.27 152.4 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "064b5dbd-d8c7-4c7b-9051-b0af774d8a39")
 	)
 	(label "nSTART_BTN"
 		(at 67.31 143.51 0)
@@ -5263,6 +5209,16 @@
 			(justify right bottom)
 		)
 		(uuid "3c8f0a9f-1201-4011-ba54-09900b2ebe2f")
+	)
+	(label "RADIO_UART_TX"
+		(at 260.35 203.2 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "427588aa-bc4a-45a5-b78b-84abbecad436")
 	)
 	(label "MCU_UART_RX"
 		(at 200.66 139.7 0)
@@ -5384,6 +5340,16 @@
 		)
 		(uuid "b6c860f0-879c-4f7e-abd6-0e9989797e76")
 	)
+	(label "MCU_UART_RX"
+		(at 260.35 205.74 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "bb092415-542d-40e9-a7be-18b1c1a8651f")
+	)
 	(label "MCU_UART_TX"
 		(at 158.75 148.59 180)
 		(effects
@@ -5433,6 +5399,16 @@
 			(justify left bottom)
 		)
 		(uuid "cd1d6f8a-f987-4210-82fd-c73bd1f680b8")
+	)
+	(label "RADIO_BOOT"
+		(at 260.35 200.66 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "d5fac6df-0478-4c2a-800d-e968237542ad")
 	)
 	(label "nBUZZ_BTN"
 		(at 67.31 140.97 0)
@@ -5774,6 +5750,110 @@
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
 					(reference "#PWR028")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_US")
+		(at 194.31 139.7 0)
+		(mirror y)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "12b899ff-9348-4fb3-9fd8-0d249850ac43")
+		(property "Reference" "R20"
+			(at 191.77 138.4299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10k, 1%"
+			(at 191.77 140.9699 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 193.294 139.954 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 194.31 139.7 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "RES, 10k, 1/20W, 1%, 0402"
+			(at 194.31 139.7 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C25744"
+			(at 194.31 139.7 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 194.31 139.7 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "7a489449-9153-48e7-8800-0f786f0669fa")
+		)
+		(pin "1"
+			(uuid "296892c8-eb43-416b-9e42-63e5a0c22044")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "R20")
 					(unit 1)
 				)
 			)
@@ -6454,83 +6534,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 182.88 135.89 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "311af386-8fc0-46e0-b3ad-6f9392f0a0b2")
-		(property "Reference" "#PWR029"
-			(at 182.88 142.24 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 182.88 140.97 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 182.88 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 182.88 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 182.88 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "0b9acf2f-0235-448c-b357-8e0b945113c9")
-		)
-		(instances
-			(project "TimerRemote"
-				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "#PWR029")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:C")
 		(at 204.47 114.3 0)
 		(unit 1)
@@ -6713,6 +6716,83 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+5V")
+		(at 254 193.04 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "35406900-4dc3-47aa-bde3-28c2e56694a4")
+		(property "Reference" "#PWR030"
+			(at 254 196.85 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "VBAT"
+			(at 253.746 189.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 254 193.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 254 193.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 254 193.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4aeb1714-26b4-4711-96f1-882614b02cbc")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "#PWR030")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 66.04 53.34 0)
 		(unit 1)
@@ -6866,86 +6946,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Jumper:Jumper_2_Bridged")
-		(at 189.23 133.35 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "37970685-78d9-4935-aa5b-c5d91f658517")
-		(property "Reference" "JP1"
-			(at 189.23 128.27 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "Jumper_2_Bridged"
-			(at 189.23 130.81 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Jumper:SolderJumper-2_P1.3mm_Bridged_RoundedPad1.0x1.5mm"
-			(at 189.23 133.35 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 189.23 138.43 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Jumper, 2-pole, closed/bridged"
-			(at 189.23 140.97 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "7d394152-0e5d-4054-b82c-2e70939118b9")
-		)
-		(pin "2"
-			(uuid "bc6ce23d-732e-4703-b201-a16f3399da3c")
-		)
-		(instances
-			(project "TimerRemote"
-				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "JP1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Connector:Conn_01x06_Pin")
 		(at 240.03 243.84 0)
 		(unit 1)
@@ -6966,7 +6966,7 @@
 				)
 			)
 		)
-		(property "Value" "PROG"
+		(property "Value" "STM_PROG"
 			(at 247.65 235.966 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8401,6 +8401,84 @@
 	)
 	(symbol
 		(lib_id "power:GND")
+		(at 194.31 144.78 0)
+		(mirror y)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6d1e0038-bbe8-4393-bfb6-4289804664c4")
+		(property "Reference" "#PWR029"
+			(at 194.31 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 194.31 148.844 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 194.31 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 194.31 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 194.31 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ba902b8e-09d5-48fe-b3e2-90f89ca1f4c9")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "#PWR029")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
 		(at 49.53 252.73 0)
 		(unit 1)
 		(body_style 1)
@@ -8996,6 +9074,83 @@
 	)
 	(symbol
 		(lib_id "power:GND")
+		(at 247.65 210.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "8e467fb5-ab24-434c-b4f6-decf8ffe9eb1")
+		(property "Reference" "#PWR039"
+			(at 247.65 217.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 247.65 214.884 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 247.65 210.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 247.65 210.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 247.65 210.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d4e70c11-a8e8-4981-a6e4-0032b111c58e")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "#PWR039")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
 		(at 76.2 252.73 0)
 		(unit 1)
 		(body_style 1)
@@ -9573,6 +9728,119 @@
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
 					(reference "#PWR09")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x06_Pin")
+		(at 240.03 200.66 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "c674d884-d635-4b3d-8adf-0ddae88b90d9")
+		(property "Reference" "J4"
+			(at 240.665 190.5 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "RAD_PROG"
+			(at 247.65 192.786 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_Harwin:Harwin_M20-89006xx_1x06_P2.54mm_Horizontal"
+			(at 240.03 200.66 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 240.03 200.66 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x06, script generated"
+			(at 240.03 200.66 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C20610215"
+			(at 240.03 200.66 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 240.03 200.66 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "4"
+			(uuid "c50f656c-d7b9-4d96-b38a-ce458be15817")
+		)
+		(pin "2"
+			(uuid "1903cde9-97c0-4594-944b-6c7e3a08c212")
+		)
+		(pin "5"
+			(uuid "36086d6f-ea9b-4116-966c-6b1ae5dda96a")
+		)
+		(pin "6"
+			(uuid "ed89cdc9-f8b2-4b17-9d01-597285db4b28")
+		)
+		(pin "1"
+			(uuid "86f37472-0246-4230-a7d9-7471c36f96ab")
+		)
+		(pin "3"
+			(uuid "b4b2fd89-c228-42ab-b8d7-0498a0a7817b")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "J4")
 					(unit 1)
 				)
 			)

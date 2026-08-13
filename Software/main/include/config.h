@@ -32,6 +32,9 @@
 #define RADIO_RST_PIN 25
 #define RADIO_UART_TX 23
 #define RADIO_UART_RX 22
+// Hard limit: the module's AT interface runs on its LPUART, which cannot
+// exceed 9600 baud. Must match the RA08H_p2p_bridge firmware.
+#define RADIO_BAUD 9600
 
 // LED pin assignments
 #define DIGIT_PIN   5

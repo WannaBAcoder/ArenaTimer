@@ -1,16 +1,15 @@
 #include "lowpower.h"
 #include <Arduino.h>
-#include <STM32LowPower.h>
+
+// See lowpower.h: STOP-mode sleep disabled for now, MCU stays on and polls.
 
 void lowPowerInit() {
-    LowPower.begin();
 }
 
 void lowPowerAttachWakeButton(uint32_t pin, WakeCallback callback) {
     pinMode(pin, INPUT_PULLUP);
-    LowPower.attachInterruptWakeup(pin, callback, FALLING, DEEP_SLEEP_MODE);
+    attachInterrupt(digitalPinToInterrupt(pin), callback, FALLING);
 }
 
 void lowPowerSleep() {
-    LowPower.deepSleep();
 }

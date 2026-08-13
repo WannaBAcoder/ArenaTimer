@@ -1,15 +1,14 @@
 #include "loraRemotes.h"
 #include "config.h"
 #include "packet.h"
+#include "rfConfig.h"
 #include <string.h>
 
 // RA-08H is UART-only on this board (see PCB Files/ESP32_Lora netlist) - no
 // SPI/SWD to the module itself. Everything below talks AT commands over
-// UART2. The exact P2P receive command/response format is UNCONFIRMED for
-// RA-08H's stock firmware - written against the AT+TEST=RXLRPKT convention
-// seen on other ASR6601-based modules. Verify against
-// Software/Wireless Controllers/TimerRemote/src/radio.cpp's radioDiagnose()
-// output once hardware is available, and update both sides together.
+// UART2, targeting the custom P2P firmware in Software/RA08H_p2p_bridge
+// (stock RA-08H firmware is LoRaWAN-only and has no device-to-device path).
+// Protocol confirmed on hardware - see that project's README.
 
 static HardwareSerial radioSerial(2); // UART2
 
@@ -35,6 +34,30 @@ static bool hexDecode(const char* hex, size_t hexLen, uint8_t* out, size_t outLe
         out[i] = (uint8_t)((hi << 4) | lo);
     }
     return true;
+}
+
+// Sends one AT command line (CRLF appended) and blocks for a CRLF-terminated
+// response, up to timeoutMs. Only used at boot for AT+RFCFG - the ongoing
+// RX/pairing path in loraPoll() is intentionally non-blocking and doesn't
+// use this.
+static size_t sendRadioATCommand(const char* cmd, char* respBuf, size_t bufLen, uint32_t timeoutMs) {
+    while (radioSerial.available()) radioSerial.read(); // flush stale bytes
+
+    radioSerial.print(cmd);
+    radioSerial.print("\r\n");
+
+    size_t received = 0;
+    uint32_t start = millis();
+    while (millis() - start < timeoutMs && received < bufLen - 1) {
+        if (radioSerial.available()) {
+            respBuf[received++] = radioSerial.read();
+            if (received >= 2 && respBuf[received - 2] == '\r' && respBuf[received - 1] == '\n') {
+                break;
+            }
+        }
+    }
+    respBuf[received] = '\0';
+    return received;
 }
 
 static void saveRole(const uint8_t deviceId[4], uint8_t role) {
@@ -130,11 +153,16 @@ static void handleRadioLine(const char* line) {
         handlePacket(pkt);
     }
 
-    radioSerial.print("AT+TEST=RXLRPKT\r\n"); // re-arm continuous receive
+    // No re-arm command needed: RA08H_p2p_bridge re-arms Radio.Rx() itself on
+    // every packet/timeout, and has no "AT+TEST=RXLRPKT" command at all -
+    // sending one just draws a harmless but noisy "ERROR" reply from it.
 }
 
 void loraInit() {
-    radioSerial.begin(115200, SERIAL_8N1, RADIO_UART_RX, RADIO_UART_TX);
+    // 9600, not 115200: the module's AT interface sits on its LPUART, whose
+    // baud rate cannot exceed 9600. This is a hardware limit of the RA-08H,
+    // not a preference - see Software/RA08H_p2p_bridge/README.md.
+    radioSerial.begin(RADIO_BAUD, SERIAL_8N1, RADIO_UART_RX, RADIO_UART_TX);
 
     pinMode(RADIO_RST_PIN, OUTPUT);
     digitalWrite(RADIO_RST_PIN, LOW);
@@ -142,7 +170,30 @@ void loraInit() {
     digitalWrite(RADIO_RST_PIN, HIGH);
     delay(500); // let the module boot before talking to it
 
-    radioSerial.print("AT+TEST=RXLRPKT\r\n"); // arm continuous receive
+    // The radio doesn't persist RF settings across resets - it always comes
+    // up on its own compiled-in defaults - so push the desired config (see
+    // rfConfig.h) on every boot. To retune, edit rfConfig.h and reflash the
+    // ESP32 (USB, no BOOT-jumper dance) rather than the radio itself.
+    //
+    // Retried rather than trusting a single fixed delay: the radio's own
+    // boot sequence can take longer than the 500ms above in practice, and
+    // this is the one command that has to land before the radio is fully
+    // booted - confirmed on hardware (STM32 side) that a single attempt at
+    // 500ms can time out.
+    char cmd[48];
+    snprintf(cmd, sizeof(cmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
+    char resp[64];
+    bool rfCfgOk = false;
+    for (int attempt = 0; attempt < 5 && !rfCfgOk; attempt++) {
+        sendRadioATCommand(cmd, resp, sizeof(resp), 300);
+        rfCfgOk = (strstr(resp, "OK") != nullptr);
+        if (!rfCfgOk) delay(200);
+    }
+    Serial.printf("[LORA] RFCFG %s -> %s\n", cmd, rfCfgOk ? "OK" : "FAILED after retries");
+
+    // No arm command needed: p2p_bridge calls Radio.Rx() itself once init
+    // finishes (see Software/RA08H_p2p_bridge/src/main.c) and has no
+    // "AT+TEST=RXLRPKT" command to send one to anyway.
     Serial.println("[LORA] init complete");
 }
 

@@ -37,15 +37,37 @@ static void sendPacket(uint8_t role, uint8_t buttonId) {
 // Simple press-and-release handling: debounce, send once, then block until
 // the button is physically released before allowing sleep again. This is a
 // deliberate change from the old ESP-NOW controller firmware, which kept
-// re-blasting packets every ~25ms for as long as a button (particularly
-// BUZZER) was held. LoRa duty-cycle/airtime regulations make that pattern
-// inappropriate here, so every button - including BUZZER - is single-shot
-// per press on this firmware.
+// re-blasting packets every ~25ms for as long as any button was held. LoRa
+// duty-cycle/airtime considerations make that pattern inappropriate here, so
+// every button is single-shot per press on this firmware - except BUZZER
+// (see below), which needs to feel like a continuous tone while held.
+//
+// The ESP32 side (Software/main/src/timerLogic.cpp's triggerBeep()) already
+// extends its beep-off timer by 250ms on every BTN_BUZZER packet received,
+// and lets the tone lapse if packets stop arriving - originally meant as a
+// lost-signal safeguard, but it doubles as exactly the mechanism needed
+// here. Resending well inside that 250ms window keeps the tone continuous
+// with comfortable margin for an occasional dropped packet, at a small
+// fraction of the old ESP-NOW rate.
+#define BUZZER_REPEAT_MS 100
+
 static void handleButtonPress(uint32_t pin, uint8_t role, uint8_t buttonId) {
     delay(30); // debounce
     if (digitalRead(pin) != LOW) return; // was noise, not a real press
 
     sendPacket(role, buttonId);
+
+    if (buttonId == BTN_BUZZER) {
+        uint32_t lastSend = millis();
+        while (digitalRead(pin) == LOW) {
+            if (millis() - lastSend >= BUZZER_REPEAT_MS) {
+                lastSend = millis();
+                sendPacket(role, buttonId);
+            }
+            delay(10);
+        }
+        return;
+    }
 
     while (digitalRead(pin) == LOW) {
         delay(10);
@@ -69,10 +91,6 @@ void setup() {
 #error "Define VARIANT_CONTROLLER or VARIANT_READY_REMOTE (see platformio.ini envs)"
 #endif
 
-    // One-time bring-up aid: prints AT probe results out the debug TX pin so
-    // stock RA-08H firmware can be checked for P2P support before deciding
-    // whether reflashing is needed. Safe to remove once that's settled.
-    radioDiagnose();
 }
 
 void loop() {
