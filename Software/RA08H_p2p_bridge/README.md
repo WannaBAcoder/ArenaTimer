@@ -53,6 +53,42 @@ Spreading factor and bandwidth must match on both ends of a link — the two
 radios can't demodulate each other's packets otherwise. TX power is
 one-sided and only needs to change on the transmitting radio.
 
+## Runtime RX mode
+
+Also adjustable at runtime: whether the radio sits in continuous receive or
+sleeps between transmits. A LoRa remote in this system only ever sends
+button presses and never needs to receive, so leaving it in continuous RX —
+the SX1262's most power-hungry state — burns battery for no functional
+benefit. The timer needs the opposite: it must always be listening.
+
+```
+host -> radio:  AT+RXMODE=<mode>\n
+radio -> host:  OK                                (applied)
+                ERROR                              (out of range or malformed)
+
+host -> radio:  AT+RXMODE?\n
+radio -> host:  +RXMODE: <mode>
+                OK
+```
+
+| mode | meaning |
+|---|---|
+| 0 | TX-only — radio sleeps between sends, wakes automatically to transmit |
+| 1 | continuous RX (default) — always listening, as before this command existed |
+
+Same as RFCFG: not persisted, RAM-only, reset to `DEFAULT_RX_MODE` on every
+power-up. Waking from sleep to transmit needs no special handling — any SPI
+transaction wakes the SX1262 automatically (a documented hardware feature),
+and this firmware already relies on that exact transition after every
+completed TX regardless of RX mode.
+
+Both host projects' `rfConfig.h` currently default to `RF_RX_MODE = 1`
+(continuous, matching pre-RXMODE behavior) even on remotes, until TX-only
+mode has been measured and validated on real hardware. Flip to `0` on a
+remote's `rfConfig.h` once confirmed worthwhile, and reflash just that
+board's STM32/ESP32 — no radio reflash needed, same firmware image runs
+either mode.
+
 ## Radio configuration (power-on defaults)
 
 | setting | value |
@@ -129,7 +165,7 @@ Expected boot output:
 === p2p_bridge boot ===
 CKPT: xo32k enabled
 ... (per-step init checkpoints) ...
-CKPT: tx config done
+CKPT: rf config applied (power=14 sf=7 bw=0 cr=1)
 READY
 ```
 

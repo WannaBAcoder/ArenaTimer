@@ -395,6 +395,11 @@ void connectWiFi() {
     
     if (ssid.length() == 0 || ssid == "Disconnected") {
         startAPMode();
+        // currentState defaults to CONNECTING at declaration - without this,
+        // loop()'s CONNECTING case keeps calling checkWiFiConnection() every
+        // cycle, which (since no STA connection was ever attempted) times
+        // out after 15s and calls startAPMode() a second, redundant time.
+        currentState = IDLE;
         return;
     }
     
@@ -544,10 +549,21 @@ void setup() {
   // always double-sided.
   isDoubleSided = true;
 
-  loadSavedSettings();
+  // Push a black frame as early as physically possible. WS2812 strips can
+  // latch garbage into their shift registers as VCC ramps up at power-on,
+  // and it stays visible on the strip until the first valid frame overwrites
+  // it - so the longer setup() takes to reach its first FastLED.show(), the
+  // longer that noise is visible. digit_physical/border_physical are
+  // already zero (global arrays live in .bss, zeroed before any code runs),
+  // so this just needs to run before the slower init steps below
+  // (initNetwork()'s AP/HTTP/WebSocket bring-up, loraInit()'s radio
+  // handshake) rather than after them.
   initDisplay();
+  FastLED.show();
+
+  loadSavedSettings();
   initNetwork();
-  
+
   updateLEDs();
   setBorder();
   FastLED.show();

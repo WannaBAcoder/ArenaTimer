@@ -9,6 +9,30 @@ static HardwareSerial radioSerial(PIN_RADIO_RX, PIN_RADIO_TX);
 // One-way debug output only, to J2 pin 5. No RX wired, hence NC.
 static HardwareSerial debugSerial(NC, PIN_DEBUG_TX);
 
+// Sends one boot-time AT command, retrying briefly rather than trusting a
+// single fixed delay: the radio's own boot sequence (oscillator startup,
+// RTC init, radio hardware init) can take longer than the delay before this
+// is first called, and every boot-time command has to land before the radio
+// is fully up - unlike a button-press TXLRPKT, which always happens long
+// after boot. Confirmed on hardware: a single attempt right after reset can
+// time out. Prints the result on the debug line.
+static bool sendBootCommandWithRetry(const char* cmd, const char* label) {
+    char resp[64];
+    bool ok = false;
+    for (int attempt = 0; attempt < 5 && !ok; attempt++) {
+        radioSendATCommand(cmd, resp, sizeof(resp), 300);
+        ok = (strstr(resp, "OK") != nullptr);
+        if (!ok) delay(200);
+    }
+
+    debugSerial.print("[radio] ");
+    debugSerial.print(label);
+    debugSerial.print(" ");
+    debugSerial.print(cmd);
+    debugSerial.println(ok ? " -> OK" : " -> FAILED after retries");
+    return ok;
+}
+
 void radioInit() {
     debugSerial.begin(115200);
     // 9600, not 115200: the module's AT interface sits on its LPUART, whose
@@ -26,27 +50,14 @@ void radioInit() {
     // up on its own compiled-in defaults - so push the desired config (see
     // rfConfig.h) on every boot. To retune, edit rfConfig.h and reflash the
     // STM32 (fast, ST-Link only) rather than the radio itself.
-    //
-    // Retried rather than trusting a single fixed delay: the radio's own
-    // boot sequence (oscillator startup, RTC init, radio hardware init) can
-    // take longer than the 500ms above in practice, and this is the one
-    // command that has to land before the radio is fully booted - every
-    // other AT command (a button-press TXLRPKT) happens long after boot, so
-    // this timing edge never surfaced until RFCFG was added. Confirmed on
-    // hardware: a single attempt at 500ms can time out.
-    char cmd[48];
-    snprintf(cmd, sizeof(cmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
-    char resp[64];
-    bool rfCfgOk = false;
-    for (int attempt = 0; attempt < 5 && !rfCfgOk; attempt++) {
-        radioSendATCommand(cmd, resp, sizeof(resp), 300);
-        rfCfgOk = (strstr(resp, "OK") != nullptr);
-        if (!rfCfgOk) delay(200);
-    }
+    char rfCfgCmd[48];
+    snprintf(rfCfgCmd, sizeof(rfCfgCmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
+    sendBootCommandWithRetry(rfCfgCmd, "RFCFG");
 
-    debugSerial.print("[radio] RFCFG ");
-    debugSerial.print(cmd);
-    debugSerial.println(rfCfgOk ? " -> OK" : " -> FAILED after retries");
+    char rxModeCmd[24];
+    snprintf(rxModeCmd, sizeof(rxModeCmd), "AT+RXMODE=%d", RF_RX_MODE);
+    sendBootCommandWithRetry(rxModeCmd, "RXMODE");
+
     debugSerial.println("[radio] init complete");
 }
 

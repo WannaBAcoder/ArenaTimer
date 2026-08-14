@@ -60,6 +60,23 @@ static size_t sendRadioATCommand(const char* cmd, char* respBuf, size_t bufLen, 
     return received;
 }
 
+// Sends one boot-time AT command, retrying briefly rather than trusting a
+// single fixed delay: the radio's own boot sequence can take longer than
+// the delay before this is first called, and every boot-time command has to
+// land before the radio is fully up - confirmed on hardware (STM32 side)
+// that a single attempt right after reset can time out.
+static bool sendBootCommandWithRetry(const char* cmd, const char* label) {
+    char resp[64];
+    bool ok = false;
+    for (int attempt = 0; attempt < 5 && !ok; attempt++) {
+        sendRadioATCommand(cmd, resp, sizeof(resp), 300);
+        ok = (strstr(resp, "OK") != nullptr);
+        if (!ok) delay(200);
+    }
+    Serial.printf("[LORA] %s %s -> %s\n", label, cmd, ok ? "OK" : "FAILED after retries");
+    return ok;
+}
+
 static void saveRole(const uint8_t deviceId[4], uint8_t role) {
     preferences.begin("bot-timer", false);
     const char* label = "";
@@ -174,22 +191,13 @@ void loraInit() {
     // up on its own compiled-in defaults - so push the desired config (see
     // rfConfig.h) on every boot. To retune, edit rfConfig.h and reflash the
     // ESP32 (USB, no BOOT-jumper dance) rather than the radio itself.
-    //
-    // Retried rather than trusting a single fixed delay: the radio's own
-    // boot sequence can take longer than the 500ms above in practice, and
-    // this is the one command that has to land before the radio is fully
-    // booted - confirmed on hardware (STM32 side) that a single attempt at
-    // 500ms can time out.
-    char cmd[48];
-    snprintf(cmd, sizeof(cmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
-    char resp[64];
-    bool rfCfgOk = false;
-    for (int attempt = 0; attempt < 5 && !rfCfgOk; attempt++) {
-        sendRadioATCommand(cmd, resp, sizeof(resp), 300);
-        rfCfgOk = (strstr(resp, "OK") != nullptr);
-        if (!rfCfgOk) delay(200);
-    }
-    Serial.printf("[LORA] RFCFG %s -> %s\n", cmd, rfCfgOk ? "OK" : "FAILED after retries");
+    char rfCfgCmd[48];
+    snprintf(rfCfgCmd, sizeof(rfCfgCmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
+    sendBootCommandWithRetry(rfCfgCmd, "RFCFG");
+
+    char rxModeCmd[24];
+    snprintf(rxModeCmd, sizeof(rxModeCmd), "AT+RXMODE=%d", RF_RX_MODE);
+    sendBootCommandWithRetry(rxModeCmd, "RXMODE");
 
     // No arm command needed: p2p_bridge calls Radio.Rx() itself once init
     // finishes (see Software/RA08H_p2p_bridge/src/main.c) and has no

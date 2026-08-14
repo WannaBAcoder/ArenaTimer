@@ -8,6 +8,6 @@
 //   1 = Red
 //   2 = Blue
 
-#define READY_REMOTE_COLOR 1
+#define READY_REMOTE_COLOR 2
 
 #endif

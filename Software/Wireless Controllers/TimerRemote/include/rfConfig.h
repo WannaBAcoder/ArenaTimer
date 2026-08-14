@@ -17,4 +17,12 @@
 #define RF_BW       0  // 0 = 125 kHz, 1 = 250 kHz, 2 = 500 kHz
 #define RF_CR       1  // coding rate, 1 = 4/5 .. 4 = 4/8
 
+// A remote only ever transmits (button presses) - it never needs to
+// receive - so RF_RX_MODE = 0 (TX-only) lets the radio sleep between sends
+// instead of idling in its most power-hungry state (continuous RX) for no
+// functional benefit. Left at 1 (continuous, matching the radio's own
+// compiled-in default - i.e. no behavior change) until that's actually been
+// measured and validated on hardware; flip to 0 once confirmed worthwhile.
+#define RF_RX_MODE 1 // 0 = TX-only (sleep between sends), 1 = continuous RX
+
 #endif

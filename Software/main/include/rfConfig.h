@@ -18,4 +18,9 @@
 #define RF_BW       0  // 0 = 125 kHz, 1 = 250 kHz, 2 = 500 kHz
 #define RF_CR       1  // coding rate, 1 = 4/5 .. 4 = 4/8
 
+// The timer must always be listening for remotes - unlike a remote's
+// rfConfig.h, this isn't a tunable default, it's a hard requirement. Leave
+// at 1 (continuous RX).
+#define RF_RX_MODE 1 // 0 = TX-only (sleep between sends), 1 = continuous RX
+
 #endif

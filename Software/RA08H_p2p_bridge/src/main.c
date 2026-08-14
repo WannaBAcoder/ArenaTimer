@@ -24,6 +24,22 @@
 // other's packets; TX power is one-sided and only needs to change on the
 // transmitting radio.
 //
+// Also runtime-adjustable: whether the radio sits in continuous receive or
+// sleeps between transmits. A LoRa remote in this system only ever sends
+// (button presses) and never needs to receive, so leaving it in continuous
+// RX - the SX1262's most power-hungry state - burns battery for no reason.
+// The timer, which must always be listening, needs the opposite:
+//   host -> radio:  AT+RXMODE=<mode>\n
+//                     mode: 0 = TX-only (sleep between sends - remotes)
+//                           1 = continuous RX (default - the timer)
+//   radio -> host:  OK\r\n   or ERROR\r\n if out of range
+//   host -> radio:  AT+RXMODE?\n
+//   radio -> host:  +RXMODE: <mode>\r\nOK\r\n
+// Waking from Sleep() to transmit needs no special handling: any SPI
+// transaction wakes the SX1262 automatically (a documented hardware
+// feature), and this firmware already relies on that exact Sleep()->next
+// action transition after every completed TX (see OnTxDone below).
+//
 // Runs identically on both the remote and timer boards - which side is
 // "remote" vs "timer" is entirely a host-MCU concern, not a radio concern.
 //
@@ -75,6 +91,11 @@
 #define RFCFG_CR_MIN     1
 #define RFCFG_CR_MAX     4
 
+// AT+RXMODE values - see header comment.
+#define RXMODE_TX_ONLY      0
+#define RXMODE_CONTINUOUS   1
+#define DEFAULT_RX_MODE     RXMODE_CONTINUOUS
+
 // Bridge UART baud - proven reliable on this LPUART peripheral empirically
 // (the stock AT firmware also caps out around here; 115200 is not safe on
 // this peripheral, see project memory: RA-08H firmware uncertainty).
@@ -90,6 +111,7 @@ static int8_t  currentPower = DEFAULT_TX_OUTPUT_POWER;
 static uint8_t currentSF    = DEFAULT_LORA_SPREADING_FACTOR;
 static uint8_t currentBW    = DEFAULT_LORA_BANDWIDTH;
 static uint8_t currentCR    = DEFAULT_LORA_CODINGRATE;
+static uint8_t currentRxMode = DEFAULT_RX_MODE;
 
 static uint8_t RxPayload[MAX_PAYLOAD];
 static uint16_t RxPayloadSize = 0;
@@ -131,10 +153,22 @@ static bool hexDecode(const char* hex, uint16_t hexLen, uint8_t* out, uint16_t* 
     return true;
 }
 
+// Re-arms continuous receive if that's the configured mode, otherwise sleeps
+// instead - see AT+RXMODE in the header comment. Called after every TX/RX
+// completion or timeout in place of an unconditional Radio.Rx().
+static void rearmOrSleep(void)
+{
+    if (currentRxMode == RXMODE_CONTINUOUS) {
+        Radio.Rx(RX_TIMEOUT_VALUE);
+    } else {
+        Radio.Sleep();
+    }
+}
+
 void OnTxDone(void)
 {
     Radio.Sleep();
-    Radio.Rx(RX_TIMEOUT_VALUE);
+    rearmOrSleep();
 }
 
 void OnRxDone(uint8_t* payload, uint16_t size, int16_t rssi, int8_t snr)
@@ -147,28 +181,28 @@ void OnRxDone(uint8_t* payload, uint16_t size, int16_t rssi, int8_t snr)
         LastSnr = snr;
         RxPending = true;
     }
-    Radio.Rx(RX_TIMEOUT_VALUE);
+    rearmOrSleep();
 }
 
 void OnTxTimeout(void)
 {
     Radio.Sleep();
-    Radio.Rx(RX_TIMEOUT_VALUE);
+    rearmOrSleep();
 }
 
 void OnRxTimeout(void)
 {
-    Radio.Rx(RX_TIMEOUT_VALUE);
+    rearmOrSleep();
 }
 
 void OnRxError(void)
 {
-    Radio.Rx(RX_TIMEOUT_VALUE);
+    rearmOrSleep();
 }
 
-// Applies currentPower/currentSF/currentBW/currentCR to the radio and
-// re-arms receive. Called once at boot with the DEFAULT_* values, and again
-// whenever AT+RFCFG changes them.
+// Applies currentPower/currentSF/currentBW/currentCR to the radio, then
+// re-arms receive or sleeps per currentRxMode. Called once at boot with the
+// DEFAULT_* values, and again whenever AT+RFCFG changes them.
 static void applyRadioConfig(void)
 {
     Radio.Sleep();
@@ -183,7 +217,7 @@ static void applyRadioConfig(void)
                        LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
                        0, true, 0, 0, LORA_IQ_INVERSION_ON, true);
 
-    Radio.Rx(RX_TIMEOUT_VALUE);
+    rearmOrSleep();
 }
 
 static void lpuart_init_step(void)
@@ -320,11 +354,29 @@ static void handleRfCfgSet(const char* args)
     printf("OK\r\n");
 }
 
+static void handleRxModeSet(const char* args)
+{
+    int mode;
+    const char* p = args;
+    if (!parseNextInt(&p, &mode) ||
+        (mode != RXMODE_TX_ONLY && mode != RXMODE_CONTINUOUS)) {
+        printf("ERROR\r\n");
+        return;
+    }
+
+    currentRxMode = (uint8_t)mode;
+    rearmOrSleep(); // take effect immediately, not just on the next TX/RX event
+
+    printf("OK\r\n");
+}
+
 static void handleCommand(const char* line)
 {
-    static const char txPrefix[]     = "AT+TEST=TXLRPKT,\"";
+    static const char txPrefix[]       = "AT+TEST=TXLRPKT,\"";
     static const char rfCfgSetPrefix[] = "AT+RFCFG=";
     static const char rfCfgQuery[]     = "AT+RFCFG?";
+    static const char rxModeSetPrefix[] = "AT+RXMODE=";
+    static const char rxModeQuery[]     = "AT+RXMODE?";
 
     if (strncmp(line, txPrefix, sizeof(txPrefix) - 1) == 0) {
         handleTxCommand(line, txPrefix, sizeof(txPrefix) - 1);
@@ -340,6 +392,17 @@ static void handleCommand(const char* line)
 
     if (strncmp(line, rfCfgSetPrefix, sizeof(rfCfgSetPrefix) - 1) == 0) {
         handleRfCfgSet(line + sizeof(rfCfgSetPrefix) - 1);
+        return;
+    }
+
+    if (strcmp(line, rxModeQuery) == 0) {
+        printf("+RXMODE: %d\r\n", (int)currentRxMode);
+        printf("OK\r\n");
+        return;
+    }
+
+    if (strncmp(line, rxModeSetPrefix, sizeof(rxModeSetPrefix) - 1) == 0) {
+        handleRxModeSet(line + sizeof(rxModeSetPrefix) - 1);
         return;
     }
 
