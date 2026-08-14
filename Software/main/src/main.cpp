@@ -395,11 +395,6 @@ void connectWiFi() {
     
     if (ssid.length() == 0 || ssid == "Disconnected") {
         startAPMode();
-        // currentState defaults to CONNECTING at declaration - without this,
-        // loop()'s CONNECTING case keeps calling checkWiFiConnection() every
-        // cycle, which (since no STA connection was ever attempted) times
-        // out after 15s and calls startAPMode() a second, redundant time.
-        currentState = IDLE;
         return;
     }
     
@@ -549,23 +544,22 @@ void setup() {
   // always double-sided.
   isDoubleSided = true;
 
-  // Push a black frame as early as physically possible. WS2812 strips can
-  // latch garbage into their shift registers as VCC ramps up at power-on,
-  // and it stays visible on the strip until the first valid frame overwrites
-  // it - so the longer setup() takes to reach its first FastLED.show(), the
-  // longer that noise is visible. digit_physical/border_physical are
-  // already zero (global arrays live in .bss, zeroed before any code runs),
-  // so this just needs to run before the slower init steps below
-  // (initNetwork()'s AP/HTTP/WebSocket bring-up, loraInit()'s radio
-  // handshake) rather than after them.
-  initDisplay();
-  FastLED.show();
-
   loadSavedSettings();
+  initDisplay();
   initNetwork();
+
+  // Must stay ahead of the FastLED.show() below. FastLED.show() is
+  // asynchronous on ESP32 (RMT clocks the frame out in the background after
+  // show() returns), and loraInit() blocks for ~1s+ between its radio reset
+  // delay and AT command retries. With loraInit() after the show, that
+  // blocking starved the RMT refill mid-frame and latched a corrupted
+  // rainbow into the strips until the next redraw. Verified on a scope.
+  loraInit();
 
   updateLEDs();
   setBorder();
+  applyDoubleSidedMirror(); // else side B stays dark until loop()'s first redraw
+  needsLEDUpdate = false;
   FastLED.show();
 
   pinMode(RESET_BTN, INPUT_PULLUP);
@@ -576,8 +570,6 @@ void setup() {
   pinMode(RED_BTN, INPUT_PULLUP);
   pinMode(BUZZ_PIN, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
-
-  loraInit();
 }
 
 void loop() {

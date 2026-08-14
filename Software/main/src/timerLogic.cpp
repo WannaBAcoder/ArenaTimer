@@ -39,35 +39,44 @@ extern CRGB border_physical[];
 
 void handleConnectingAnimation() {
   static unsigned long lastAnimTime = 0;
-  static bool borderOn = true;
+  static int8_t lastDrawnBorderOn = -1; // -1 = nothing drawn yet
 
-  if (millis() - lastAnimTime >= 30) {
-    lastAnimTime = millis();
+  unsigned long now = millis();
+  bool borderOn = (now % (blinkInterval * 2)) < blinkInterval;
 
-    if (millis() % (blinkInterval * 2) < blinkInterval) {
-      borderOn = true;
-    } else {
-      borderOn = false;
-    }
+  // Re-entering CONNECTING after being away (e.g. a dropped connection)?
+  // Force a redraw so the first frame isn't skipped just because borderOn
+  // happens to match whatever we last drew, possibly minutes ago.
+  if (now - lastAnimTime > blinkInterval * 2) lastDrawnBorderOn = -1;
+  lastAnimTime = now;
 
-    for (int i = 0; i < DOUBLE_STRIP_LEN; i++) {
-      digit_physical[i] = CRGB::Black;
-      border_physical[i] = CRGB::Black;
-    }
+  // Redraw only when the blink actually flips. What's on screen depends
+  // solely on borderOn, so the old 30ms tick pushed ~16 identical frames per
+  // blink. Each FastLED.show() is an asynchronous RMT transfer, and one in
+  // flight while the WiFi stack does heavy connect-time work can get
+  // corrupted mid-transmission - which showed up as random pixel flashes
+  // during this animation. Fewer frames, far fewer chances to be hit.
+  // Scoped to this animation only; every other state redraws as before.
+  if (borderOn == (lastDrawnBorderOn == 1)) return;
+  lastDrawnBorderOn = borderOn ? 1 : 0;
 
-    CRGB currentBorderColor = borderOn ? ORANGE : CRGB::Black;
-    for (int i = 0; i < BORDER_LED_COUNT; i++) {
-      setBorderLEDs(i, currentBorderColor);
-    }
-
-    setChar('-', 0, displayInverted); 
-    setChar('-', 49, displayInverted);  
-    setChar('-', 150, displayInverted); 
-    setChar('-', 101, displayInverted); 
-    setColon();                         
-
-    needsLEDUpdate = true;
+  for (int i = 0; i < DOUBLE_STRIP_LEN; i++) {
+    digit_physical[i] = CRGB::Black;
+    border_physical[i] = CRGB::Black;
   }
+
+  CRGB currentBorderColor = borderOn ? ORANGE : CRGB::Black;
+  for (int i = 0; i < BORDER_LED_COUNT; i++) {
+    setBorderLEDs(i, currentBorderColor);
+  }
+
+  setChar('-', 0, displayInverted);
+  setChar('-', 49, displayInverted);
+  setChar('-', 150, displayInverted);
+  setChar('-', 101, displayInverted);
+  setColon();
+
+  needsLEDUpdate = true;
 }
 
 void checkButtons() {
@@ -135,16 +144,23 @@ void handlePausedBlink() {
   if (currentMillis - lastBlinkTime >= blinkInterval) {
     lastBlinkTime = currentMillis;
     blinkState = !blinkState;
-    
+
     if (blinkState) {
-        updateLEDs(); 
+        updateLEDs();
     } else {
       for (int i = 0; i < DIGIT_LED_COUNT; i++) {
           setDigitLEDs(i, CRGB::Black);
       }
     }
+
+    // Inside the interval check, not outside it: this used to run on every
+    // call (~20ms via loop()'s gate), pushing ~25 identical frames per blink
+    // for a display that only changes twice a second. Same reasoning as
+    // handleConnectingAnimation() - each FastLED.show() is an asynchronous
+    // RMT transfer that can be corrupted if something blocks while it's in
+    // flight, so redundant frames are pure downside.
+    needsLEDUpdate = true;
   }
-  needsLEDUpdate = true; 
 }
 
 void startPreCountdown() {
