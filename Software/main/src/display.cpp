@@ -9,6 +9,16 @@ CRGB border_physical[DOUBLE_STRIP_LEN];
 
 int mirrorOffsetIndex = 0;
 
+uint32_t lastLedShowMillis = 0;
+
+// Every FastLED.show() call site should go through this, not FastLED.show()
+// directly - see the extern comment in display.h for why the timestamp
+// matters.
+void showLeds() {
+    FastLED.show();
+    lastLedShowMillis = millis();
+}
+
 void initDisplay() {
     if (isDoubleSided) {
         FastLED.addLeds<NEOPIXEL, DIGIT_PIN>(digit_physical, DOUBLE_STRIP_LEN);

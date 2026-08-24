@@ -60,6 +60,15 @@ const char* apPassword = "12345678";
 int countdown_time = 120; // Default to 2 minutes (120 seconds)
 int current_time = countdown_time;
 bool timeSelState = false;
+
+// Set once, the first time WiFi.status() reports WL_CONNECTED via the
+// normal STA path (never set by the AP-mode fallback). Gates the
+// auto-reconnect check in loop() - if this unit was never told to join a
+// network in the first place, boot behavior (stay in AP mode) is
+// unchanged; a later drop is only "reconnected" if it had actually
+// connected at some point, since that's what indicates someone intended
+// this unit to be on a network.
+bool wifiEverConnected = false;
 bool blueReady = false;
 bool redReady = false;
 bool readyRequired = false; // default to requiring ready-up
@@ -246,10 +255,10 @@ void initNetwork() {
         }
 
         for (int i = 0; i < BORDER_LED_COUNT; i++)
-            setBorderLEDs(i, ORANGE); 
+            setBorderLEDs(i, ORANGE);
 
         applyDoubleSidedMirror();
-        FastLED.show();
+        showLeds();
         needsLEDUpdate = false;
 
         server.send(200, "text/plain", "Clock Seeded");
@@ -315,16 +324,24 @@ void handleControl() {
     String cmd = server.arg("cmd"); 
     DEBUG_LOG("[WEB DEBUG] handleControl received endpoint query! cmd = '%s'\n", cmd.c_str());
     
-    if (cmd == "readytoggle") { 
-        String state = server.arg("state"); 
-        readyRequired = (state == "on"); 
-        preferences.begin("settings", false); 
-        preferences.putBool("readyRequired", readyRequired); 
-        preferences.end(); 
+    if (cmd == "readytoggle") {
+        String state = server.arg("state");
+        readyRequired = (state == "on");
+        preferences.begin("settings", false);
+        preferences.putBool("readyRequired", readyRequired);
+        preferences.end();
 
-        if(currentState != RUNNING) 
-          setBorder(); 
-    } 
+        // setBorder()'s color depends on readyRequired combined with
+        // redReady/blueReady, not readyRequired alone - if both were
+        // already marked ready, toggling this could land on an identical
+        // border color with no visible change. Force both back to
+        // not-ready so the border always visibly reflects the new setting.
+        redReady = false;
+        blueReady = false;
+
+        if(currentState != RUNNING)
+          setBorder();
+    }
     else if (cmd == "tapouttoggle") { 
         String state = server.arg("state"); 
         tapoutEnabled = (state == "on"); 
@@ -410,12 +427,14 @@ void checkWiFiConnection() {
     bool connectionFailed = false;
 
     if (WiFi.status() == WL_CONNECTED) {
+        wifiEverConnected = true;
+
         static bool serversStarted = false;
         if (!serversStarted) {
             server.begin();
             webSocket.begin();
             webSocket.onEvent(onWebSocketEvent);
-            
+
             Serial.println("\n[NETWORK] WiFi Connected successfully!");
             Serial.print("[NETWORK] Local IP Address: http://");
             Serial.println(WiFi.localIP());
@@ -560,7 +579,7 @@ void setup() {
   setBorder();
   applyDoubleSidedMirror(); // else side B stays dark until loop()'s first redraw
   needsLEDUpdate = false;
-  FastLED.show();
+  showLeds();
 
   pinMode(RESET_BTN, INPUT_PULLUP);
   pinMode(PAUSE_BTN, INPUT_PULLUP);
@@ -580,6 +599,31 @@ void loop() {
   webSocket.loop();
   ElegantOTA.loop();
   loraPoll(); // drained every loop iteration, not gated to 20ms like the rest below
+
+  // Auto-reconnect: only for a unit that has actually joined a network
+  // before (wifiEverConnected) - boot-time behavior (stay in AP mode if
+  // never configured) is untouched. WiFi.reconnect() just calls
+  // esp_wifi_connect() and returns immediately; it does not block waiting
+  // for the result, so this can never hang timer operation, which doesn't
+  // depend on WiFi at all. On its own 5s cadence so a drop isn't retried
+  // every loop() iteration.
+  //
+  // Also held off for 50ms after the last LED push (lastLedShowMillis):
+  // FastLED.show() is asynchronous, so a frame can still be clocking out of
+  // RMT well after show() returns - WS2812 timing for this strip length
+  // works out to roughly 10ms worst case, 50ms leaves comfortable margin.
+  // WiFi driver calls run at high interrupt priority and can briefly starve
+  // that ISR if they land mid-transfer, corrupting the frame into a stray
+  // burst of wrong-colored pixels. Confirmed on hardware: this reconnect
+  // check landing during a paused-blink redraw produced exactly that.
+  static uint32_t lastReconnectAttempt = 0;
+  if (wifiEverConnected && WiFi.status() != WL_CONNECTED &&
+      currentMillis - lastReconnectAttempt >= 5000 &&
+      currentMillis - lastLedShowMillis >= 50) {
+    lastReconnectAttempt = currentMillis;
+    Serial.println("[NETWORK] Connection lost, attempting to reconnect...");
+    WiFi.reconnect();
+  }
 
   if (currentMillis - lastFrameTime >= 20) {
     lastFrameTime = currentMillis;
@@ -630,7 +674,7 @@ void loop() {
 
     if (needsLEDUpdate) {
         applyDoubleSidedMirror();
-        FastLED.show();
+        showLeds();
         needsLEDUpdate = false;
     }
   }

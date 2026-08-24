@@ -271,7 +271,7 @@ void updateTimer() {
     }
     
     applyDoubleSidedMirror();
-    FastLED.show();
+    showLeds();
     needsLEDUpdate = false;
   }
 }
@@ -335,14 +335,14 @@ void processCommand(String cmd) {
         blinkState = true; 
         tapoutScrollPos = 0;
         tapoutAudioTriggeredThisCycle = false;
-        setBorder(); 
-        updateLEDs(); 
+        setBorder();
+        updateLEDs();
         updateClient();
         applyDoubleSidedMirror();
-        FastLED.show();
+        showLeds();
         needsLEDUpdate = false;
     }
-  } 
+  }
   else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING) {
     if (tapoutEnabled) {
         tapoutInitiatorIsBlue = (cmd == "tapoutBlue");
@@ -385,11 +385,11 @@ void processCommand(String cmd) {
 
     currentState = IDLE;
     current_time = countdown_time;
-    
+
     setBorder();
     updateLEDs();
     updateClient();
-    FastLED.show();
+    showLeds();
   }
 }
 

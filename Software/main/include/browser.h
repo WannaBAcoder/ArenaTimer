@@ -126,13 +126,32 @@ const char* html = R"rawliteral(
         </div>
 
         <script>
-            let isLockingUI = false; 
+            let isLockingUI = false;
             let lastKnownState = "IDLE";
-            let webSocket = new WebSocket(`ws://${window.location.hostname}:81/`);
+            let webSocket;
 
-            webSocket.onmessage = function(event) {
-                document.getElementById('countdown').textContent = event.data;
-            };
+            // The /status poll below (setInterval) already recovers on its
+            // own after a dropped connection - a failed fetch() there just
+            // gets silently skipped and the next tick tries again. This
+            // socket doesn't: a WebSocket that closes stays closed forever
+            // unless something opens a new one, and it's the only source
+            // for the live per-second countdown during RUNNING/
+            // PRE_COUNTDOWN_LOOP (the poll explicitly leaves the countdown
+            // alone in those two states). Without this, a WiFi drop during
+            // a running match would freeze the countdown number specifically
+            // until someone manually reloaded the page.
+            function connectWebSocket() {
+                webSocket = new WebSocket(`ws://${window.location.hostname}:81/`);
+
+                webSocket.onmessage = function(event) {
+                    document.getElementById('countdown').textContent = event.data;
+                };
+
+                webSocket.onclose = function() {
+                    setTimeout(connectWebSocket, 2000);
+                };
+            }
+            connectWebSocket();
 
             window.onload = function() {
                 fetch('/status')
