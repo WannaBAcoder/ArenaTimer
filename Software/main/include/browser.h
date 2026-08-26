@@ -26,34 +26,76 @@ const char* html = R"rawliteral(
             
             input[type="range"] { width: 80%; margin-top: 10px; }
             input[type="color"] { vertical-align: middle; cursor: pointer; }
+
+            /* Below this width, #settingsGrid stays an unstyled wrapper and
+               every .status box keeps stacking full-width like before -
+               same single-column layout the page always had on mobile. */
+            @media (min-width: 700px) {
+                #settingsGrid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 15px;
+                    align-items: stretch;
+                    max-width: 850px;
+                    margin: 0 auto;
+                }
+                /* Stretch (the grid default we're restating explicitly)
+                   makes every box in a row match the row's tallest box,
+                   instead of each hugging its own content height - that
+                   mismatch was what made the grid look ragged. */
+                #settingsGrid .status { max-width: none; margin: 0; }
+            }
         </style>
     </head>
     <body>
-        <h1>Battle Timer</h1>
-        
-        <p id="countdown">02:00</p>
-        
-        <div id="timerControls">
-            <div id="manualTimeSection" style="margin-bottom: 20px;">
-                <input type="number" id="manualMin" min="0" max="60" 
-                    oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null" 
-                    placeholder="MM"> :
-                <input type="number" id="manualSec" min="0" max="60" 
-                    oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null" 
-                    placeholder="SS">
-                <button id="setTimeBtn" class="small-btn" onclick="applyTime()" style="background:green; color:white;">Set Time</button>
-            </div>
-            
-            <div>
-                <button id="startBtn" onclick="controlTimer('start')" style="background:green; color:white;">Start</button>
-                <button id="pauseBtn" onclick="controlTimer('pause')" style="background:orange;">Pause</button>
-                <button id="resetBtn" onclick="controlTimer('reset')" style="background:#8b0000; color:white;">Reset</button>
-                <button id="switchBtn" onclick="toggleTime()" style="background:blue; color:white;">Switch 2/3m</button>
-            </div>
+        <h1 id="timerTitle">Battle Timer</h1>
+
+        <div style="margin-bottom: 15px;">
+            <input id="timerNameInput" placeholder="Timer name (e.g. Mat 1)" maxlength="24" autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px; width:150px; text-align:center;">
+            <button id="nameSaveBtn" class="small-btn" onclick="applyTimerName()" style="background:gray; color:white;">Save</button>
         </div>
 
         <div id="pairingBanner">PAIRING MODE ACTIVE...</div>
-        
+
+        <div id="settingsGrid">
+        <div id="timerControlsSection" class="status">
+            <p id="countdown">02:00</p>
+
+            <div id="timerControls">
+                <div id="manualTimeSection" style="margin-bottom: 20px;">
+                    <input type="number" id="manualMin" min="0" max="60"
+                        oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null"
+                        placeholder="MM"> :
+                    <input type="number" id="manualSec" min="0" max="60"
+                        oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null"
+                        placeholder="SS">
+                    <button id="setTimeBtn" class="small-btn" onclick="applyTime()" style="background:green; color:white;">Set Time</button>
+                </div>
+
+                <div>
+                    <button id="startBtn" onclick="controlTimer('start')" style="background:green; color:white;">Start</button>
+                    <button id="pauseBtn" onclick="controlTimer('pause')" style="background:orange;">Pause</button>
+                    <button id="resetBtn" onclick="controlTimer('reset')" style="background:#8b0000; color:white;">Reset</button>
+                    <button id="switchBtn" onclick="toggleTime()" style="background:blue; color:white;">Switch 2/3m</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="wifiSection" class="status">
+            <h3>WiFi Settings</h3>
+            <div>Current SSID: <strong id="currentSSID">----</strong></div>
+            <form action="/setwifi" method="POST" style="margin-top:10px;">
+                <input id="wifiSSID" name="ssid" placeholder="SSID" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
+                <input id="wifiPass" name="pass" type="text" placeholder="Password" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
+                <button id="wifiBtn" type="submit" class="small-btn" style="background:gray; color:white;">Save & Reboot</button>
+                <button id="wifiWipeBtn" type="button" class="small-btn" onclick="wipeWifi()" style="background:red; color:white;">Wipe</button>
+            </form>
+            <div class="flex-row" style="margin-top:15px; border-top: 1px solid #444; padding-top: 10px; flex-wrap: wrap;">
+                <a href="/update"><button id="updateBtn" class="small-btn" style="background:#444; color:white;">Firmware Update</button></a>
+                <button id="factoryResetBtn" class="small-btn" onclick="factoryReset()" style="background:#8b0000; color:white;">Restore Factory Settings</button>
+            </div>
+        </div>
+
         <div id="systemStatusSection" class="status">
             <strong>System Status:</strong><br>
             Red: <span id="redStat" style="color:red;">OPEN</span> | 
@@ -116,13 +158,17 @@ const char* html = R"rawliteral(
             </div>
         </div>
 
-        <div id="wifiSection" class="status">
-            <h3>WiFi Settings</h3>
-            <form action="/setwifi" method="POST">
-                <input id="wifiSSID" name="ssid" placeholder="SSID" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
-                <input id="wifiPass" name="pass" type="text" placeholder="Password" required autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px;"><br>
-                <button id="wifiBtn" type="submit" class="small-btn" style="background:gray; color:white;">Save & Reboot</button>
-            </form>
+        <div id="syncSection" class="status">
+            <h3>Multi-Timer Sync</h3>
+            <div>My IP: <strong id="myIP">----</strong></div>
+            <div style="margin-top:10px;">
+                <input id="syncIpInput" placeholder="Sync target IP" autocapitalize="none" autocorrect="off" style="padding:5px; margin:5px; width:120px;">
+                <button id="syncSaveBtn" class="small-btn" onclick="applySyncTarget()" style="background:gray; color:white;">Sync</button>
+                <button id="syncClearBtn" class="small-btn" onclick="clearSyncTarget()" style="background:red; color:white;">Clear</button>
+            </div>
+            <div style="margin-top:5px; font-size:0.9em;">Currently syncing to: <strong id="syncTargetStat">None</strong></div>
+        </div>
+
         </div>
 
         <script>
@@ -170,6 +216,14 @@ const char* html = R"rawliteral(
                         if(radioBtn) radioBtn.checked = true;
                     }
                     
+                    if(data.myIP) document.getElementById('myIP').textContent = data.myIP;
+                    if(data.wifiSSID !== undefined) document.getElementById('currentSSID').textContent = data.wifiSSID || '(none)';
+                    if(data.timerName !== undefined) setTimerName(data.timerName);
+                    if(data.syncTargetIP !== undefined) {
+                        document.getElementById('syncTargetStat').textContent = data.syncTargetIP || 'None';
+                        document.getElementById('syncIpInput').value = data.syncTargetIP;
+                    }
+
                     const isClockMode = (data.state === "CLOCK_MODE");
                     document.getElementById('clockToggle').checked = isClockMode;
                     updateControls(isClockMode);
@@ -187,6 +241,18 @@ const char* html = R"rawliteral(
             }
 
             function toggleFlip() { fetch('/flip'); }
+
+            function setTimerName(name) {
+                document.getElementById('timerTitle').textContent = name || 'Battle Timer';
+                document.title = name ? name + ' - Battle Timer' : 'ESP32 Battle Timer';
+                if (document.activeElement !== document.getElementById('timerNameInput')) {
+                    document.getElementById('timerNameInput').value = name || '';
+                }
+            }
+            function applyTimerName() {
+                const name = document.getElementById('timerNameInput').value.trim();
+                fetch(`/setname?name=${encodeURIComponent(name)}`).then(() => setTimerName(name));
+            }
 
             function applyAudioSettings() {
                 const enabled = document.getElementById('audioToggle').checked;
@@ -222,8 +288,30 @@ const char* html = R"rawliteral(
             function toggleTime() { fetch('/control?cmd=switch'); }
             function toggleReady() { fetch(`/control?cmd=readytoggle&state=${document.getElementById('readyToggle').checked ? "on" : "off"}`); }
             function toggleTapoutAllow() { fetch(`/control?cmd=tapouttoggle&state=${document.getElementById('tapoutToggle').checked ? "on" : "off"}`); }
+            // Unlike a slider/color-picker/checkbox, whose own visible state
+            // already reflects what was just set with no round trip needed,
+            // "Currently syncing to" is a separate readout that nothing else
+            // refreshes - and Clear needs to empty the input box itself, or
+            // it looks like it did nothing.
+            function refreshSyncStatus() {
+                fetch('/status')
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('syncTargetStat').textContent = data.syncTargetIP || 'None';
+                        document.getElementById('syncIpInput').value = data.syncTargetIP || '';
+                    });
+            }
+            function applySyncTarget() {
+                const ip = document.getElementById('syncIpInput').value.trim();
+                fetch(`/setsyncip?ip=${ip}`).then(refreshSyncStatus);
+            }
+            function clearSyncTarget() {
+                fetch('/setsyncip?ip=').then(refreshSyncStatus);
+            }
             function startPairing() { fetch('/pair'); }
             function wipeRemotes() { if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); }
+            function wipeWifi() { if(confirm("Clear saved WiFi credentials and reboot into setup mode?")) fetch('/clearwifi'); }
+            function factoryReset() { if(confirm("Wipe ALL saved settings - remotes, WiFi, sync target, colors, brightness, audio, everything - and reboot? This cannot be undone.")) fetch('/factoryreset'); }
             function applyTime() { fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
             
             setInterval(() => {
@@ -236,10 +324,37 @@ const char* html = R"rawliteral(
                         }
 
                         document.getElementById('pairingBanner').style.display = data.pairing ? 'block' : 'none';
-                        updateStatus('redStat', data.red); 
-                        updateStatus('blueStat', data.blue); 
+                        updateStatus('redStat', data.red);
+                        updateStatus('blueStat', data.blue);
                         updateStatus('judgeStat', data.judge);
-                        
+
+                        // Keep display/audio/ready/tapout/sync controls live
+                        // even when this page didn't originate the change -
+                        // e.g. a setting that arrived here via another
+                        // timer's sync push, or was edited from a second
+                        // open tab. Skip color/brightness while focused so a
+                        // poll tick can't fight an in-progress drag.
+                        if (document.activeElement !== document.getElementById('colorPicker') && data.digitColor) {
+                            document.getElementById('colorPicker').value = "#" + data.digitColor;
+                        }
+                        if (document.activeElement !== document.getElementById('brightSlider') && data.brightness !== undefined) {
+                            document.getElementById('brightSlider').value = data.brightness;
+                        }
+                        if (data.displayInverted !== undefined) document.getElementById('flipToggle').checked = data.displayInverted;
+                        if (data.readyRequired !== undefined) document.getElementById('readyToggle').checked = data.readyRequired;
+                        if (data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
+                        if (data.audioEnabled !== undefined) document.getElementById('audioToggle').checked = data.audioEnabled;
+                        if (data.remoteAudioEnabled !== undefined) document.getElementById('remoteAudioToggle').checked = data.remoteAudioEnabled;
+                        if (data.audioOutput !== undefined) {
+                            const radioBtn = document.querySelector(`input[name="outputSelect"][value="${data.audioOutput}"]`);
+                            if (radioBtn) radioBtn.checked = true;
+                        }
+                        if (data.syncTargetIP !== undefined && document.activeElement !== document.getElementById('syncIpInput')) {
+                            document.getElementById('syncTargetStat').textContent = data.syncTargetIP || 'None';
+                            document.getElementById('syncIpInput').value = data.syncTargetIP;
+                        }
+                        if (data.timerName !== undefined) setTimerName(data.timerName);
+
                         const isRunning = (data.state === "RUNNING" || data.state === "PRE_COUNTDOWN_LOOP");
                         const isPaused = (data.state === "PAUSED");
                         const isTapout = (data.state === "TAPOUT");
@@ -298,7 +413,7 @@ const char* html = R"rawliteral(
 
                         // 2. SETTINGS PANEL LOCKOUT
                         const shouldLockSettings = isRunning || isPaused || isTapout || isClockMode;
-                        const sections = ['displaySection', 'wifiSection', 'manualTimeSection', 'audioSection'];
+                        const sections = ['displaySection', 'wifiSection', 'manualTimeSection', 'audioSection', 'syncSection'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -317,7 +432,7 @@ const char* html = R"rawliteral(
                         }
 
                         // 3. INDIVIDUAL INPUT COMPONENT DISABLING
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'wifiWipeBtn', 'updateBtn', 'factoryResetBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'syncIpInput', 'syncSaveBtn', 'syncClearBtn'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {

@@ -60,6 +60,16 @@ extern uint8_t systemBrightness;
 // Global Objects
 extern Preferences preferences;
 
+// Defined in main.cpp - pushes an absolute setting value to the configured
+// multi-timer sync target (no-op if none is set). Used by timerLogic.cpp's
+// "switch" handling: relaying that as a raw toggle command over the sync
+// link is fragile (any single missed/guarded application on the peer leaves
+// the two timers permanently inverted from then on, since each subsequent
+// toggle flips both from an already-diverged base) - pushing the resulting
+// absolute time instead is self-correcting the same way every other synced
+// setting already is.
+extern void pushSyncSetting(const char* type, const String& value);
+
 // Constants
 const float scrollInterval = 1000.0 / BORDER_LED_COUNT;
 const unsigned long debounceDelay = 200;

@@ -365,16 +365,20 @@ void processCommand(String cmd) {
   }
 
   else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) {
-    countdown_time = (countdown_time == 120) ? 180 : 120; 
-    current_time = countdown_time; 
-    bool newTimeSelState = (countdown_time == 180); 
-    
-    preferences.begin("settings", false); 
-    preferences.putBool("timeSelState", newTimeSelState); 
-    preferences.end(); 
-    
-    updateClient(); 
-    updateLEDs(); 
+    countdown_time = (countdown_time == 120) ? 180 : 120;
+    current_time = countdown_time;
+    bool newTimeSelState = (countdown_time == 180);
+
+    preferences.begin("settings", false);
+    preferences.putBool("timeSelState", newTimeSelState);
+    preferences.end();
+
+    // Push the resulting absolute time, not the toggle itself - see the
+    // comment on pushSyncSetting's extern declaration in config.h.
+    pushSyncSetting("time", String(current_time / 60) + "," + String(current_time % 60));
+
+    updateClient();
+    updateLEDs();
   }
   else if (cmd == "clockOff") {
     Serial.println("[PERSISTENCE] Clock Mode toggled OFF via Web UI. Updating flash preference...");

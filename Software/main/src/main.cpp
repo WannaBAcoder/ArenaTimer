@@ -19,6 +19,18 @@ void handleSetTime();
 void updateClient();
 void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
 void handleSetWiFi();
+void handleClearWiFi();
+void pushSyncCommand(const char* cmd);
+void pushSyncSetting(const char* type, const String& value);
+void pushAllSyncSettings();
+void applyDigitColor(uint32_t hex);
+void applyBrightnessSetting(int val);
+void applyDisplayInverted(bool inverted);
+void applySettingsAudio(bool enabled, bool remoteEnabled, uint8_t output);
+void applyReadyRequired(bool required);
+void applyTapoutEnabled(bool enabled);
+void applyClockMode(int hour, int minute, int s);
+void applyManualTime(int m, int s);
 void connectWiFi();
 void checkWiFiConnection();
 void loadSavedSettings();
@@ -105,6 +117,26 @@ uint8_t systemBrightness = 127;
 
 bool isDoubleSided = true;
 
+// Multi-timer sync: lets one timer's web page drive another over WiFi (both
+// already have to be on the same local network for their own web UI, so this
+// reuses that link instead of adding a second radio hop). Empty = standalone
+// (default). Point-to-point by design - configuring both timers to target
+// each other is fine, since only handleControl()'s locally-originated branch
+// ever pushes (see pushSyncCommand call sites), never the /synccmd receiver,
+// so a received command can't bounce back and forth forever.
+String syncTargetIP = "";
+
+// The SSID this unit is configured to join, cached at connectWiFi() time so
+// /status doesn't need a flash (NVS) read on every poll. Empty if never
+// configured (fresh unit, boots straight to AP mode).
+String configuredSSID = "";
+
+// Per-unit display label ("Mat 1", "Mat 2", ...) so operators running
+// several timers can tell them apart at a glance. Deliberately never synced
+// to the multi-timer sync target - each unit needs its own distinct name,
+// so pushing it would defeat the point.
+String timerName = "";
+
 void initNetwork() {
     connectWiFi();
 
@@ -112,6 +144,30 @@ void initNetwork() {
     server.on("/control", handleControl);
     server.on("/settime", handleSetTime);
     server.on("/setwifi", handleSetWiFi);
+    server.on("/clearwifi", handleClearWiFi);
+
+    // Full reset: every preference namespace this firmware uses ("settings"
+    // covers colors/brightness/audio/tapout/ready/display-flip/sync target/
+    // clock-active; "wifi" covers the saved SSID/password; "bot-timer"
+    // covers remote pairing) - cleared wholesale with preferences.clear()
+    // rather than removing individual keys, so a setting added here later
+    // is automatically covered too. Reboot re-reads everything, which is
+    // where each preferences.getX(key, default) call supplies the factory
+    // default for whatever's now missing.
+    server.on("/factoryreset", []() {
+        Serial.println("[SYSTEM] Factory reset requested - wiping all saved settings...");
+
+        const char* namespaces[] = { "settings", "wifi", "bot-timer" };
+        for (const char* ns : namespaces) {
+            preferences.begin(ns, false);
+            preferences.clear();
+            preferences.end();
+        }
+
+        server.send(200, "text/html", "<h1>Factory Reset Complete! Rebooting...</h1>");
+        delay(3000);
+        ESP.restart();
+    });
     
     server.on("/pair", []() { 
         pairingMode = true; 
@@ -122,6 +178,112 @@ void initNetwork() {
     server.on("/clear_remotes", []() {
         clearRemotes();
         server.send(200, "text/plain", "Remotes Wiped");
+    });
+
+    server.on("/setname", []() {
+        String name = server.arg("name");
+        name.trim();
+        if (name.length() > 24) name = name.substring(0, 24); // keep the header readable
+
+        timerName = name;
+        preferences.begin("settings", false);
+        preferences.putString("timerName", timerName);
+        preferences.end();
+
+        server.send(200, "text/plain", "Name Saved");
+    });
+
+    server.on("/setsyncip", []() {
+        String ip = server.arg("ip");
+        ip.trim();
+
+        if (ip.length() == 0) {
+            syncTargetIP = "";
+            preferences.begin("settings", false);
+            preferences.remove("syncIP");
+            preferences.end();
+            server.send(200, "text/plain", "Sync target cleared");
+            return;
+        }
+
+        IPAddress test;
+        if (!test.fromString(ip)) {
+            server.send(400, "text/plain", "Invalid IP address");
+            return;
+        }
+
+        syncTargetIP = ip;
+        preferences.begin("settings", false);
+        preferences.putString("syncIP", syncTargetIP);
+        preferences.end();
+
+        // Newly bound - push everything this unit currently has, not just
+        // future changes, so the two timers start out in sync immediately
+        // instead of waiting for the next individual setting to drift over.
+        // Deliberately settings only (color/brightness/flip/audio/ready/
+        // tapout/clock), not match-control state - forcing the peer to
+        // start/pause/reset a possibly-active match just because someone
+        // typed an IP address would be a surprising side effect.
+        pushAllSyncSettings();
+
+        server.send(200, "text/plain", "Sync target saved");
+    });
+
+    // Received end of the sync link (see pushSyncCommand). Deliberately only
+    // ever queues locally - never re-pushes to this unit's own syncTargetIP -
+    // so two timers configured to sync each other can't echo forever.
+    server.on("/synccmd", []() {
+        String cmd = server.arg("cmd");
+        if (cmd == "start" || cmd == "pause" || cmd == "reset" || cmd == "clockOff") {
+            queueCommand(cmd.c_str());
+        }
+        server.send(200, "text/plain", "OK");
+    });
+
+    // Received end of the settings sync link (see pushSyncSetting). Each
+    // apply* helper is the same one the locally-originated /setXXX handler
+    // itself calls, so a synced setting takes effect and persists exactly
+    // like a locally-made change - the only difference is this path never
+    // calls pushSyncSetting() itself, so two timers configured to sync each
+    // other can't echo a setting back and forth forever.
+    server.on("/syncsetting", []() {
+        String type = server.arg("type");
+        String value = server.arg("value");
+
+        if (type == "color") {
+            applyDigitColor(strtoul(value.c_str(), NULL, 16));
+        } else if (type == "brightness") {
+            applyBrightnessSetting(value.toInt());
+        } else if (type == "flip") {
+            applyDisplayInverted(value == "true");
+        } else if (type == "audio") {
+            int c1 = value.indexOf(',');
+            int c2 = value.indexOf(',', c1 + 1);
+            if (c1 > 0 && c2 > c1) {
+                applySettingsAudio(value.substring(0, c1) == "true",
+                                    value.substring(c1 + 1, c2) == "true",
+                                    value.substring(c2 + 1).toInt());
+            }
+        } else if (type == "readyRequired") {
+            applyReadyRequired(value == "true");
+        } else if (type == "tapoutEnabled") {
+            applyTapoutEnabled(value == "true");
+        } else if (type == "time") {
+            int c1 = value.indexOf(',');
+            if (c1 > 0) {
+                applyManualTime(value.substring(0, c1).toInt(), value.substring(c1 + 1).toInt());
+            }
+        } else if (type == "clockOn") {
+            int c1 = value.indexOf(',');
+            int c2 = value.indexOf(',', c1 + 1);
+            if (c1 > 0 && c2 > c1) {
+                applyClockMode(value.substring(0, c1).toInt(),
+                                value.substring(c1 + 1, c2).toInt(),
+                                value.substring(c2 + 1).toInt());
+            }
+        }
+
+        server.send(200, "text/plain", "OK");
     });
 
     server.on("/status", []() {
@@ -149,6 +311,10 @@ void initNetwork() {
       json += "\"judge\":" + String(judgePaired ? "true" : "false") + ",";
       json += "\"brightness\":" + String(systemBrightness) + ",";
       json += "\"displayInverted\":" + String(displayInverted ? "true" : "false") + ",";
+      json += "\"myIP\":\"" + WiFi.localIP().toString() + "\",";
+      json += "\"syncTargetIP\":\"" + syncTargetIP + "\",";
+      json += "\"wifiSSID\":\"" + configuredSSID + "\",";
+      json += "\"timerName\":\"" + timerName + "\",";
 
       char hexColor[7];
       snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);
@@ -182,13 +348,11 @@ void initNetwork() {
             hex = 0x323232;
         }
 
-        digitColor = CRGB(hex);
-        
-        preferences.begin("settings", false);
-        preferences.putUInt("digitColor", hex);
-        preferences.end();
-        
-        updateLEDs();
+        applyDigitColor(hex);
+
+        char hexOut[7];
+        snprintf(hexOut, sizeof(hexOut), "%06X", hex);
+        pushSyncSetting("color", hexOut);
 
         server.send(200, "text/plain", "Color Processed & Saved");
     });
@@ -199,14 +363,8 @@ void initNetwork() {
           return;
       }
       int requestedVal = server.arg("val").toInt();
-      systemBrightness = constrain(requestedVal, 10, 230);
-
-      preferences.begin("settings", false);
-      preferences.putUChar("brightness", systemBrightness);
-      preferences.end();
-
-      FastLED.setBrightness(systemBrightness);
-      needsLEDUpdate = true;
+      applyBrightnessSetting(requestedVal);
+      pushSyncSetting("brightness", String(systemBrightness));
 
       server.send(200, "text/plain", "Brightness Set");
     });
@@ -220,65 +378,15 @@ void initNetwork() {
         int minute = server.arg("m").toInt();
         int s = server.arg("s").toInt();
 
-        struct tm tm;
-        tm.tm_hour = hour; tm.tm_min = minute; tm.tm_sec = s;
-        tm.tm_year = 2026 - 1900; tm.tm_mon = 4; tm.tm_mday = 10;
-        time_t t = mktime(&tm);
-        struct timeval now = { .tv_sec = t };
-        settimeofday(&now, NULL);
-        
-        currentState = CLOCK_MODE;
-
-        preferences.begin("settings", false);
-        preferences.putBool("clockActive", true);
-        preferences.end();
-
-
-        for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
-        for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
-
-        if (hour == 0) hour = 12;
-        if (hour > 12) hour -= 12;
-
-        if (!displayInverted) {
-            setDigit(hour / 10, 0, false);
-            setDigit(hour % 10, 49, false);
-            setColon();
-            setDigit(minute / 10, 150, true);
-            setDigit(minute % 10, 101, true);
-        } else {
-            setDigit(minute % 10, 0, false);
-            setDigit(minute / 10, 49, false);
-            setColon();
-            setDigit(hour % 10, 150, true);
-            setDigit(hour / 10, 101, true);
-        }
-
-        for (int i = 0; i < BORDER_LED_COUNT; i++)
-            setBorderLEDs(i, ORANGE);
-
-        applyDoubleSidedMirror();
-        showLeds();
-        needsLEDUpdate = false;
+        applyClockMode(hour, minute, s);
+        pushSyncSetting("clockOn", String(hour) + "," + String(minute) + "," + String(s));
 
         server.send(200, "text/plain", "Clock Seeded");
     });
 
     server.on("/flip", []() {
-      displayInverted = !displayInverted;
-      preferences.begin("settings", false);
-      preferences.putBool("dispInv", displayInverted);
-      preferences.end();
-      
-      needsLEDUpdate = true;
-      
-      if (currentState == CLOCK_MODE) {
-          handleClockMode(); 
-      } else {
-          updateLEDs();
-      }
-      
-      setBorder();
+      applyDisplayInverted(!displayInverted);
+      pushSyncSetting("flip", displayInverted ? "true" : "false");
 
       server.send(200, "text/plain", displayInverted ? "Inverted" : "Normal");
     });
@@ -289,15 +397,14 @@ void initNetwork() {
             return;
         }
         
-        if (server.hasArg("enabled")) audioEnabled = (server.arg("enabled") == "true");
-        if (server.hasArg("remoteEnabled")) remoteAudioEnabled = (server.arg("remoteEnabled") == "true");
-        if (server.hasArg("output")) audioOutputSelect = server.arg("output").toInt();
+        bool enabled = server.hasArg("enabled") ? (server.arg("enabled") == "true") : audioEnabled;
+        bool remoteEnabled = server.hasArg("remoteEnabled") ? (server.arg("remoteEnabled") == "true") : remoteAudioEnabled;
+        uint8_t output = server.hasArg("output") ? server.arg("output").toInt() : audioOutputSelect;
 
-        preferences.begin("settings", false);
-        preferences.putBool("audioEnabled", audioEnabled);
-        preferences.putBool("remoteAudio", remoteAudioEnabled);
-        preferences.putUChar("audioOutput", audioOutputSelect);
-        preferences.end();
+        applySettingsAudio(enabled, remoteEnabled, output);
+        pushSyncSetting("audio", String(audioEnabled ? "true" : "false") + "," +
+                                  String(remoteAudioEnabled ? "true" : "false") + "," +
+                                  String(audioOutputSelect));
 
         server.send(200, "text/plain", "Audio Settings Saved");
     });
@@ -311,6 +418,16 @@ void initNetwork() {
 
 void startAPMode() {
     Serial.println("Starting Access Point mode...");
+
+    // The ESP32 WiFi driver keeps retrying a STA connection attempt on its
+    // own even after our app-level 15s timeout in checkWiFiConnection()
+    // gives up on it - calling softAP() straight into that can leave the
+    // driver stuck tearing down the still-active STA attempt for a long
+    // time before the AP actually comes up. Explicitly stopping STA and
+    // switching mode first avoids racing that teardown.
+    WiFi.disconnect();
+    WiFi.mode(WIFI_AP);
+
     WiFi.softAP(apSSID, apPassword);
     Serial.print("AP IP Address: ");
     Serial.println(WiFi.softAPIP());
@@ -326,36 +443,217 @@ void handleControl() {
     
     if (cmd == "readytoggle") {
         String state = server.arg("state");
-        readyRequired = (state == "on");
-        preferences.begin("settings", false);
-        preferences.putBool("readyRequired", readyRequired);
-        preferences.end();
-
-        // setBorder()'s color depends on readyRequired combined with
-        // redReady/blueReady, not readyRequired alone - if both were
-        // already marked ready, toggling this could land on an identical
-        // border color with no visible change. Force both back to
-        // not-ready so the border always visibly reflects the new setting.
-        redReady = false;
-        blueReady = false;
-
-        if(currentState != RUNNING)
-          setBorder();
+        applyReadyRequired(state == "on");
+        pushSyncSetting("readyRequired", readyRequired ? "true" : "false");
     }
-    else if (cmd == "tapouttoggle") { 
-        String state = server.arg("state"); 
-        tapoutEnabled = (state == "on"); 
-        
-        preferences.begin("settings", false); 
-        preferences.putBool("tapoutEnabled", tapoutEnabled); 
-        preferences.end(); 
-        
-        Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED"); 
-    } 
+    else if (cmd == "tapouttoggle") {
+        String state = server.arg("state");
+        applyTapoutEnabled(state == "on");
+        pushSyncSetting("tapoutEnabled", tapoutEnabled ? "true" : "false");
+    }
     else {
+        // Push to the configured sync target (if any) before queueing
+        // locally - since pushSyncCommand() blocks on the HTTP round trip,
+        // this gives the peer's copy of the command a small head start over
+        // this unit's own state machine instead of stacking strictly after
+        // it. Scoped to match-control commands only, same set the old
+        // LoRa-based version relayed.
+        // "switch" is deliberately excluded here - see the comment on
+        // pushSyncSetting's extern declaration in config.h. Its own
+        // absolute-time push happens from within processCommand() once the
+        // toggle actually lands, not from this queue-and-forget point.
+        if (cmd == "start" || cmd == "pause" || cmd == "reset" || cmd == "clockOff") {
+            pushSyncCommand(cmd.c_str());
+        }
+
         queueCommand(cmd.c_str());
     }
     server.send(200, "text/plain", "OK");
+}
+
+void pushSyncCommand(const char* cmd) {
+    if (syncTargetIP.length() == 0) return;
+
+    // Bounded timeout so an unreachable/misconfigured peer can only ever
+    // stall this HTTP request handler briefly, never hang the timer - match
+    // control itself doesn't depend on this call succeeding.
+    HTTPClient http;
+    http.setTimeout(300);
+    http.begin("http://" + syncTargetIP + "/synccmd?cmd=" + String(cmd));
+    http.GET();
+    http.end();
+}
+
+void pushSyncSetting(const char* type, const String& value) {
+    if (syncTargetIP.length() == 0) return;
+
+    HTTPClient http;
+    http.setTimeout(300);
+    http.begin("http://" + syncTargetIP + "/syncsetting?type=" + String(type) + "&value=" + value);
+    http.GET();
+    http.end();
+}
+
+void pushAllSyncSettings() {
+    char hexColor[7];
+    snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);
+    pushSyncSetting("color", hexColor);
+
+    pushSyncSetting("brightness", String(systemBrightness));
+    pushSyncSetting("flip", displayInverted ? "true" : "false");
+    pushSyncSetting("audio", String(audioEnabled ? "true" : "false") + "," +
+                              String(remoteAudioEnabled ? "true" : "false") + "," +
+                              String(audioOutputSelect));
+    pushSyncSetting("readyRequired", readyRequired ? "true" : "false");
+    pushSyncSetting("tapoutEnabled", tapoutEnabled ? "true" : "false");
+    pushSyncSetting("time", String(current_time / 60) + "," + String(current_time % 60));
+
+    if (currentState == CLOCK_MODE) {
+        struct tm timeinfo;
+        if (getLocalTime(&timeinfo)) {
+            pushSyncSetting("clockOn", String(timeinfo.tm_hour) + "," + String(timeinfo.tm_min) + "," + String(timeinfo.tm_sec));
+        }
+    }
+}
+
+// Each of these is shared between the locally-originated /setXXX handler and
+// the /syncsetting receiver (see initNetwork()), so a setting synced from a
+// peer takes effect and persists exactly like a locally-made change.
+
+void applyDigitColor(uint32_t hex) {
+    digitColor = CRGB(hex);
+    preferences.begin("settings", false);
+    preferences.putUInt("digitColor", hex);
+    preferences.end();
+    updateLEDs();
+}
+
+void applyBrightnessSetting(int val) {
+    systemBrightness = constrain(val, 10, 230);
+    preferences.begin("settings", false);
+    preferences.putUChar("brightness", systemBrightness);
+    preferences.end();
+    FastLED.setBrightness(systemBrightness);
+    needsLEDUpdate = true;
+}
+
+void applyDisplayInverted(bool inverted) {
+    displayInverted = inverted;
+    preferences.begin("settings", false);
+    preferences.putBool("dispInv", displayInverted);
+    preferences.end();
+
+    needsLEDUpdate = true;
+
+    if (currentState == CLOCK_MODE) {
+        handleClockMode();
+    } else {
+        updateLEDs();
+    }
+
+    setBorder();
+}
+
+void applySettingsAudio(bool enabled, bool remoteEnabled, uint8_t output) {
+    audioEnabled = enabled;
+    remoteAudioEnabled = remoteEnabled;
+    audioOutputSelect = output;
+
+    preferences.begin("settings", false);
+    preferences.putBool("audioEnabled", audioEnabled);
+    preferences.putBool("remoteAudio", remoteAudioEnabled);
+    preferences.putUChar("audioOutput", audioOutputSelect);
+    preferences.end();
+}
+
+void applyReadyRequired(bool required) {
+    readyRequired = required;
+    preferences.begin("settings", false);
+    preferences.putBool("readyRequired", readyRequired);
+    preferences.end();
+
+    // setBorder()'s color depends on readyRequired combined with
+    // redReady/blueReady, not readyRequired alone - if both were already
+    // marked ready, toggling this could land on an identical border color
+    // with no visible change. Force both back to not-ready so the border
+    // always visibly reflects the new setting.
+    redReady = false;
+    blueReady = false;
+
+    if (currentState != RUNNING) setBorder();
+}
+
+void applyTapoutEnabled(bool enabled) {
+    tapoutEnabled = enabled;
+    preferences.begin("settings", false);
+    preferences.putBool("tapoutEnabled", tapoutEnabled);
+    preferences.end();
+
+    Serial.printf("[SYSTEM] Tapout Functionality updated and saved: %s\n", tapoutEnabled ? "ENABLED" : "DISABLED");
+}
+
+void applyClockMode(int hour, int minute, int s) {
+    struct tm tm;
+    tm.tm_hour = hour; tm.tm_min = minute; tm.tm_sec = s;
+    tm.tm_year = 2026 - 1900; tm.tm_mon = 4; tm.tm_mday = 10;
+    time_t t = mktime(&tm);
+    struct timeval now = { .tv_sec = t };
+    settimeofday(&now, NULL);
+
+    currentState = CLOCK_MODE;
+
+    preferences.begin("settings", false);
+    preferences.putBool("clockActive", true);
+    preferences.end();
+
+    for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
+    for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
+
+    if (hour == 0) hour = 12;
+    if (hour > 12) hour -= 12;
+
+    if (!displayInverted) {
+        setDigit(hour / 10, 0, false);
+        setDigit(hour % 10, 49, false);
+        setColon();
+        setDigit(minute / 10, 150, true);
+        setDigit(minute % 10, 101, true);
+    } else {
+        setDigit(minute % 10, 0, false);
+        setDigit(minute / 10, 49, false);
+        setColon();
+        setDigit(hour % 10, 150, true);
+        setDigit(hour / 10, 101, true);
+    }
+
+    for (int i = 0; i < BORDER_LED_COUNT; i++)
+        setBorderLEDs(i, ORANGE);
+
+    applyDoubleSidedMirror();
+    showLeds();
+    needsLEDUpdate = false;
+}
+
+void applyManualTime(int m, int s) {
+    // Guards a match in progress on whichever side actually applies this -
+    // handleSetTime() also checks up front for its own 403 response, but
+    // this is what protects the /syncsetting receive path, where there's no
+    // separate check: a peer's active match shouldn't get yanked back to
+    // IDLE just because someone typed a time into a bound timer's own page.
+    if (currentState == RUNNING || currentState == PRE_COUNTDOWN_LOOP) return;
+
+    // countdown_time is what Reset (and the pre-match countdown) actually
+    // reverts to - the "switch" 2/3-min toggle already updates both this and
+    // current_time together. Setting current_time alone here left
+    // countdown_time pointing at whatever was set before, so Reset on a
+    // manually-set (or sync-received) time would silently snap back to the
+    // old value instead of the one that's now on screen.
+    countdown_time = (m * 60) + s;
+    current_time = countdown_time;
+    currentState = IDLE;
+
+    updateClient();
+    updateLEDs();
 }
 
 void handleSetTime() {
@@ -366,13 +664,10 @@ void handleSetTime() {
 
     int m = server.arg("m").toInt();
     int s = server.arg("s").toInt();
-    
-    current_time = (m * 60) + s;
-    currentState = IDLE;
-    
-    updateClient();
-    updateLEDs();
-    
+
+    applyManualTime(m, s);
+    pushSyncSetting("time", String(m) + "," + String(s));
+
     server.send(200, "text/plain", "Time Updated");
 }
 
@@ -404,17 +699,30 @@ void handleSetWiFi() {
     }
 }
 
+void handleClearWiFi() {
+    preferences.begin("wifi", false);
+    preferences.remove("ssid");
+    preferences.remove("pass");
+    preferences.end();
+
+    server.send(200, "text/html", "<h1>WiFi Credentials Cleared! Rebooting...</h1>");
+    delay(3000);
+    ESP.restart();
+}
+
 void connectWiFi() {
     preferences.begin("wifi", true);
     String ssid = preferences.getString("ssid", "");
     String pass = preferences.getString("pass", "");
     preferences.end();
-    
+
+    configuredSSID = ssid;
+
     if (ssid.length() == 0 || ssid == "Disconnected") {
         startAPMode();
         return;
     }
-    
+
     WiFi.begin(ssid.c_str(), pass.c_str());
     startAttemptTime = millis(); 
     currentState = CONNECTING;   
@@ -546,11 +854,13 @@ void loadSavedSettings() {
     audioEnabled = preferences.getBool("audioEnabled", true);
     remoteAudioEnabled = preferences.getBool("remoteAudio", true);
     audioOutputSelect = preferences.getUChar("audioOutput", 0);
-    
-    preferences.end(); 
-    FastLED.setBrightness(systemBrightness); 
-    uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000); 
-    digitColor = CRGB(savedColor); 
+    syncTargetIP = preferences.getString("syncIP", "");
+    timerName = preferences.getString("timerName", "");
+    uint32_t savedColor = preferences.getUInt("digitColor", 0xFF0000);
+
+    preferences.end();
+    FastLED.setBrightness(systemBrightness);
+    digitColor = CRGB(savedColor);
 
     countdown_time = timeSelState ? 180 : 120; 
     current_time = countdown_time; 
