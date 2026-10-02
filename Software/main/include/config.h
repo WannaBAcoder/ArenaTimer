@@ -76,7 +76,18 @@ const unsigned long debounceDelay = 200;
 
 // Add these to your "Global Objects" or "Constants" section
 extern bool pairingMode;
+
+// redPaired/bluePaired/judgePaired are the UI-facing "is this role bound at
+// all" flags (true if bound via LoRa OR ESP-NOW) - recomputed by
+// recomputePairedFlags() below any time a path-specific flag changes. Each
+// backend validates incoming packets against its OWN path-specific flag
+// (e.g. loraRemotes.cpp checks redLoraPaired, never the combined redPaired),
+// so a role bound only on one path can't be spoofed by a packet arriving on
+// the other, unbound one.
 extern bool redPaired, bluePaired, judgePaired;
+extern bool redLoraPaired, blueLoraPaired, judgeLoraPaired;
+extern bool redEspNowPaired, blueEspNowPaired, judgeEspNowPaired;
+void recomputePairedFlags(); // Defined in main.cpp
 
 // Add these to Config.h
 extern int current_time;
@@ -124,6 +135,14 @@ void queueCommand(const char* cmd); // Defined in main.cpp
 void loraInit();
 void loraPoll();
 void loraLoadSavedRemotes();
+
+// Defined in espnowRemotes.cpp
+void espnowInit();
+void espnowLoadSavedRemotes();
+
+// Defined in main.cpp - wipes both backends' pairing state together, since
+// the operator-facing "Wipe All" button doesn't (and shouldn't need to) know
+// which path a given role was bound through.
 void clearRemotes();
 
 #endif

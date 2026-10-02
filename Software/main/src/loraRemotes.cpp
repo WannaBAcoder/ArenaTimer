@@ -19,6 +19,9 @@ static uint8_t judgeID[4] = {0};
 static char lineBuf[128];
 static size_t lineLen = 0;
 
+static bool radioPresent = false;
+bool loraRadioPresent() { return radioPresent; }
+
 static bool hexDecode(const char* hex, size_t hexLen, uint8_t* out, size_t outLen) {
     if (hexLen != outLen * 2) return false;
     auto nibble = [](char c) -> int {
@@ -84,22 +87,23 @@ static void saveRole(const uint8_t deviceId[4], uint8_t role) {
     if (role == ROLE_RED_READY) {
         memcpy(redID, deviceId, 4);
         preferences.putBytes("redID", deviceId, 4);
-        redPaired = true;
+        redLoraPaired = true;
         label = "RedReady";
     } else if (role == ROLE_BLUE_READY) {
         memcpy(blueID, deviceId, 4);
         preferences.putBytes("blueID", deviceId, 4);
-        bluePaired = true;
+        blueLoraPaired = true;
         label = "BlueReady";
     } else if (role == ROLE_JUDGE) {
         memcpy(judgeID, deviceId, 4);
         preferences.putBytes("judgeID", deviceId, 4);
-        judgePaired = true;
+        judgeLoraPaired = true;
         label = "Judge";
     }
 
     preferences.end();
-    Serial.printf("[BIND] %s paired successfully.\n", label);
+    recomputePairedFlags();
+    Serial.printf("[BIND] %s paired successfully (LoRa).\n", label);
 }
 
 static void handlePacket(const RemotePacket& pkt) {
@@ -111,7 +115,7 @@ static void handlePacket(const RemotePacket& pkt) {
 
     switch (pkt.role) {
         case ROLE_RED_READY:
-            if (redPaired && memcmp(pkt.deviceId, redID, 4) == 0) {
+            if (redLoraPaired && memcmp(pkt.deviceId, redID, 4) == 0) {
                 if (currentState == RUNNING) {
                     queueCommand("tapoutRed");
                 } else {
@@ -123,7 +127,7 @@ static void handlePacket(const RemotePacket& pkt) {
             break;
 
         case ROLE_BLUE_READY:
-            if (bluePaired && memcmp(pkt.deviceId, blueID, 4) == 0) {
+            if (blueLoraPaired && memcmp(pkt.deviceId, blueID, 4) == 0) {
                 if (currentState == RUNNING) {
                     queueCommand("tapoutBlue");
                 } else {
@@ -135,7 +139,7 @@ static void handlePacket(const RemotePacket& pkt) {
             break;
 
         case ROLE_JUDGE:
-            if (judgePaired && memcmp(pkt.deviceId, judgeID, 4) == 0) {
+            if (judgeLoraPaired && memcmp(pkt.deviceId, judgeID, 4) == 0) {
                 switch (pkt.buttonId) {
                     case BTN_START: queueCommand("start"); break;
                     case BTN_PAUSE: queueCommand("pause"); break;
@@ -193,7 +197,17 @@ void loraInit() {
     // ESP32 (USB, no BOOT-jumper dance) rather than the radio itself.
     char rfCfgCmd[48];
     snprintf(rfCfgCmd, sizeof(rfCfgCmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
-    sendBootCommandWithRetry(rfCfgCmd, "RFCFG");
+    radioPresent = sendBootCommandWithRetry(rfCfgCmd, "RFCFG");
+
+    // No radio answered any of RFCFG's retries - this unit doesn't have the
+    // RA-08H installed (older ESP-NOW-only hardware sharing this firmware
+    // image). Skip RXMODE's own retry budget too rather than spending it on
+    // a radio that was already shown not to be there, and leave loraPoll()
+    // a no-op for the rest of runtime.
+    if (!radioPresent) {
+        Serial.println("[LORA] No radio detected - running ESP-NOW only.");
+        return;
+    }
 
     char rxModeCmd[24];
     snprintf(rxModeCmd, sizeof(rxModeCmd), "AT+RXMODE=%d", RF_RX_MODE);
@@ -206,6 +220,8 @@ void loraInit() {
 }
 
 void loraPoll() {
+    if (!radioPresent) return;
+
     while (radioSerial.available()) {
         char c = radioSerial.read();
         if (c == '\n') {
@@ -220,28 +236,25 @@ void loraPoll() {
 
 void loraLoadSavedRemotes() {
     preferences.begin("bot-timer", true);
-    redPaired = (preferences.getBytes("redID", redID, 4) == 4);
-    bluePaired = (preferences.getBytes("blueID", blueID, 4) == 4);
-    judgePaired = (preferences.getBytes("judgeID", judgeID, 4) == 4);
+    redLoraPaired = (preferences.getBytes("redID", redID, 4) == 4);
+    blueLoraPaired = (preferences.getBytes("blueID", blueID, 4) == 4);
+    judgeLoraPaired = (preferences.getBytes("judgeID", judgeID, 4) == 4);
     preferences.end();
+    recomputePairedFlags();
 }
 
-void clearRemotes() {
-    Serial.println("[SYSTEM] Wiping remote bindings...");
-
+void loraClearRemotes() {
     preferences.begin("bot-timer", false);
     preferences.remove("redID");
     preferences.remove("blueID");
     preferences.remove("judgeID");
     preferences.end();
 
-    redPaired = false;
-    bluePaired = false;
-    judgePaired = false;
+    redLoraPaired = false;
+    blueLoraPaired = false;
+    judgeLoraPaired = false;
 
     memset(redID, 0, 4);
     memset(blueID, 0, 4);
     memset(judgeID, 0, 4);
-
-    Serial.println("[SYSTEM] All remotes wiped.");
 }

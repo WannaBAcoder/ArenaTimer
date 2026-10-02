@@ -373,10 +373,11 @@ void processCommand(String cmd) {
     preferences.putBool("timeSelState", newTimeSelState);
     preferences.end();
 
-    // Push the resulting absolute time, not the toggle itself - see the
-    // comment on pushSyncSetting's extern declaration in config.h.
-    pushSyncSetting("time", String(current_time / 60) + "," + String(current_time % 60));
-
+    // No sync push here - processCommand() is reached by every origin
+    // (web, ESP-NOW, LoRa), and only a web-originated switch should sync
+    // to a bound peer. handleControl() pushes the resulting absolute time
+    // itself before queueing, once it knows the command actually came
+    // from the web UI - see the comment there.
     updateClient();
     updateLEDs();
   }

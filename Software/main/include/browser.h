@@ -14,6 +14,24 @@ const char* html = R"rawliteral(
             button { font-size: 18px; margin: 5px; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; transition: 0.3s; }
             .small-btn { font-size: 14px; padding: 8px 15px; }
             .flex-row { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
+            /* Centered label+value pair, not stretched edge to edge - keeps
+               a long value like "PAIRED (LoRa+ESP-NOW)" from wrapping into
+               the next role's line the way inline pipe-separated text did,
+               without the awkward gap space-between left across the box. */
+            .status-row { display: flex; justify-content: center; gap: 8px; margin: 4px 0; }
+            .status-row span:first-child { min-width: 70px; text-align: right; }
+            /* Grid instead of independently-centered rows: a fixed label
+               width broke down once values varied a lot in length (e.g.
+               "OPEN" vs "PAIRED (LoRa+ESP-NOW)") - each row centered itself
+               around a different total width, so "Red"/"Blue"/"Judge"
+               never shared a common left edge. Grid columns auto-size to
+               the widest label/value in that column, and justify-content
+               centers the whole two-column block as one unit, so labels
+               line up and the gap adapts instead of either being hardcoded
+               or stretched edge to edge. */
+            .status-grid { display: grid; grid-template-columns: auto auto; justify-content: center; column-gap: 10px; row-gap: 4px; margin: 8px 0; }
+            .status-grid > *:nth-child(odd) { text-align: right; }
+            .status-grid > *:nth-child(even) { text-align: left; }
             .status { margin: 15px auto; font-size: 16px; border: 1px solid #444; padding: 10px; border-radius: 8px; max-width: 400px; }
             #pairingBanner { display: none; background: #0000ff; padding: 15px; margin: 10px; font-weight: bold; border-radius: 5px; }
             input[type="number"], input[type="text"] { padding: 8px; width: 50px; text-align: center; border-radius: 4px; border: 1px solid #444; }
@@ -55,21 +73,28 @@ const char* html = R"rawliteral(
             <button id="nameSaveBtn" class="small-btn" onclick="applyTimerName()" style="background:gray; color:white;">Save</button>
         </div>
 
-        <div id="pairingBanner">PAIRING MODE ACTIVE...</div>
+        <div id="pairingBanner">PAIRING MODE ACTIVE... (<span id="pairingCountdown">--</span>s)</div>
 
         <div id="settingsGrid">
         <div id="timerControlsSection" class="status">
             <p id="countdown">02:00</p>
+
+            <div id="readyStatusRows" class="flex-row" style="display:none; margin-bottom:10px;">
+                <span>Red: <strong id="redReadyStat" style="color:red;">NOT READY</strong></span>
+                <span>Blue: <strong id="blueReadyStat" style="color:red;">NOT READY</strong></span>
+            </div>
 
             <div id="timerControls">
                 <div id="manualTimeSection" style="margin-bottom: 20px;">
                     <input type="number" id="manualMin" min="0" max="60"
                         oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null"
                         placeholder="MM"> :
-                    <input type="number" id="manualSec" min="0" max="60"
-                        oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 60) : null"
+                    <input type="number" id="manualSec" min="0" max="59"
+                        oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.min(Math.abs(this.value), 59) : null"
                         placeholder="SS">
                     <button id="setTimeBtn" class="small-btn" onclick="applyTime()" style="background:green; color:white;">Set Time</button>
+                    <button id="setMatchTimeBtn" class="small-btn" onclick="applyMatchTime()" style="background:#1565c0; color:white;">Match Time</button>
+                    <div style="font-size:0.8em; margin-top:4px; color:#aaa;">Set Time: just this match. Match Time: Reset returns to this until reboot (Switch 2/3m still overrides it).</div>
                 </div>
 
                 <div>
@@ -97,44 +122,56 @@ const char* html = R"rawliteral(
         </div>
 
         <div id="systemStatusSection" class="status">
-            <strong>System Status:</strong><br>
-            Red: <span id="redStat" style="color:red;">OPEN</span> | 
-            Blue: <span id="blueStat" style="color:red;">OPEN</span> | 
-            Judge: <span id="judgeStat" style="color:red;">OPEN</span>
-            
+            <h3>System Status</h3>
+            <div class="status-grid">
+                <span>Red</span><span id="redStat" style="color:red;">OPEN</span>
+                <span>Blue</span><span id="blueStat" style="color:red;">OPEN</span>
+                <span>Judge</span><span id="judgeStat" style="color:red;">OPEN</span>
+            </div>
+            <div style="text-align:center; font-size:0.9em; margin-top:4px;">LoRa radio: <strong id="loraRadioStat">----</strong></div>
+
             <div id="pairingControls" class="flex-row" style="margin-top:10px;">
                 <button id="pairBtn" class="small-btn" onclick="startPairing()" style="background:orange;">Pair Remotes</button>
                 <button id="wipeBtn" class="small-btn" onclick="wipeRemotes()" style="background:red; color:white;">Wipe All</button>
             </div>
             
             <div id="readySection">
-                <input type="checkbox" id="readyToggle" onchange="toggleReady()"> 
+                <input type="checkbox" id="readyToggle" onchange="toggleReady()">
                 <label for="readyToggle" style="display:inline;">Require Driver Ready</label>
             </div>
 
             <div id="tapoutSection" style="margin-top: 10px;">
-                <input type="checkbox" id="tapoutToggle" onchange="toggleTapoutAllow()"> 
+                <input type="checkbox" id="tapoutToggle" onchange="toggleTapoutAllow()">
                 <label for="tapoutToggle" style="display:inline;">Enable Tapout</label>
-            </div>
-
-            <div id="clockSection" style="margin-top: 10px;">
-                <input type="checkbox" id="clockToggle" onchange="toggleClockMode()"> 
-                <label for="clockToggle" style="display:inline;">Enable Clock Mode</label>
             </div>
         </div>
 
         <div id="displaySection" class="status">
-            <h3>Display Settings</h3>
-            <div>
-                <label>Digit Color: <input type="color" id="colorPicker" onchange="applyColor()" value="#ff0000"></label>
+            <!-- Only displaySettingsContent dims during a match/clock mode,
+                 not this whole box - clockSection sits outside it as a
+                 sibling, deliberately left alone, since CLOCK_MODE is one of
+                 the lockout states and its own toggle has to stay usable to
+                 escape clock mode. opacity/filter can't be un-done on a
+                 descendant once an ancestor has them, so the only way to
+                 dim "everything but this one control" is to never put that
+                 control under the dimmed element in the first place. -->
+            <div id="displaySettingsContent">
+                <h3>Display Settings</h3>
+                <div>
+                    <label>Digit Color: <input type="color" id="colorPicker" onchange="applyColor()" value="#ff0000"></label>
+                </div>
+                <div style="margin-top:15px;">
+                    <label>Brightness: <br>
+                    <input type="range" id="brightSlider" min="10" max="230" onchange="applyBrightness()" value="127"></label>
+                </div>
+                <div style="margin-top:15px; border-top: 1px solid #444; padding-top: 10px;">
+                    <input type="checkbox" id="flipToggle" onchange="toggleFlip()">
+                    <label for="flipToggle" style="display:inline;">Flip Display (Upside Down)</label>
+                </div>
             </div>
-            <div style="margin-top:15px;">
-                <label>Brightness: <br>
-                <input type="range" id="brightSlider" min="10" max="230" onchange="applyBrightness()" value="127"></label>
-            </div>
-            <div style="margin-top:15px; border-top: 1px solid #444; padding-top: 10px;">
-                <input type="checkbox" id="flipToggle" onchange="toggleFlip()"> 
-                <label for="flipToggle" style="display:inline;">Flip Display (Upside Down)</label>
+            <div id="clockSection" style="margin-top: 15px; border-top: 1px solid #444; padding-top: 10px;">
+                <input type="checkbox" id="clockToggle" onchange="toggleClockMode()">
+                <label for="clockToggle" style="display:inline;">Enable Clock Mode</label>
             </div>
         </div>
 
@@ -175,6 +212,7 @@ const char* html = R"rawliteral(
             let isLockingUI = false;
             let lastKnownState = "IDLE";
             let webSocket;
+            let preCountdownInterval = null;
 
             // The /status poll below (setInterval) already recovers on its
             // own after a dropped connection - a failed fetch() there just
@@ -313,20 +351,62 @@ const char* html = R"rawliteral(
             function wipeWifi() { if(confirm("Clear saved WiFi credentials and reboot into setup mode?")) fetch('/clearwifi'); }
             function factoryReset() { if(confirm("Wipe ALL saved settings - remotes, WiFi, sync target, colors, brightness, audio, everything - and reboot? This cannot be undone.")) fetch('/factoryreset'); }
             function applyTime() { fetch(`/settime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
+            function applyMatchTime() { fetch(`/setmatchtime?m=${document.getElementById('manualMin').value || 0}&s=${document.getElementById('manualSec').value || 0}`); }
             
             setInterval(() => {
                 fetch('/status')
                     .then(r => r.json())
                     .then(data => {
+                        const enteringPreCountdown = data.state === "PRE_COUNTDOWN_LOOP" && lastKnownState !== "PRE_COUNTDOWN_LOOP";
                         lastKnownState = data.state;
-                        if (data.state !== "RUNNING" && data.state !== "PRE_COUNTDOWN_LOOP" && data.currentTime) {
+
+                        if (enteringPreCountdown && data.preCountdown !== undefined) {
+                            // Only 3 ticks spread over 3 seconds, so a poll
+                            // landing slightly out of phase was immediately
+                            // obvious - seed once from the server, then run
+                            // the actual tick locally on the browser's own
+                            // clock instead of waiting on the next poll.
+                            let localCount = data.preCountdown;
+                            document.getElementById('countdown').textContent = localCount;
+                            if (preCountdownInterval !== null) clearInterval(preCountdownInterval);
+                            preCountdownInterval = setInterval(() => {
+                                localCount--;
+                                if (localCount > 0) {
+                                    document.getElementById('countdown').textContent = localCount;
+                                } else {
+                                    clearInterval(preCountdownInterval);
+                                    preCountdownInterval = null;
+                                }
+                            }, 1000);
+                        } else if (data.state !== "PRE_COUNTDOWN_LOOP" && data.state !== "RUNNING" && data.currentTime) {
+                            if (preCountdownInterval !== null) {
+                                clearInterval(preCountdownInterval);
+                                preCountdownInterval = null;
+                            }
                             document.getElementById('countdown').textContent = data.currentTime;
                         }
 
                         document.getElementById('pairingBanner').style.display = data.pairing ? 'block' : 'none';
-                        updateStatus('redStat', data.red);
-                        updateStatus('blueStat', data.blue);
-                        updateStatus('judgeStat', data.judge);
+                        if (data.pairing && data.pairingSecondsLeft !== undefined) {
+                            document.getElementById('pairingCountdown').textContent = data.pairingSecondsLeft;
+                        }
+                        updateStatus('redStat', data.red, data.redLora, data.redEspNow);
+                        updateStatus('blueStat', data.blue, data.blueLora, data.blueEspNow);
+                        updateStatus('judgeStat', data.judge, data.judgeLora, data.judgeEspNow);
+                        if (data.loraRadioPresent !== undefined) {
+                            const el = document.getElementById('loraRadioStat');
+                            el.textContent = data.loraRadioPresent ? 'Detected' : 'Not detected (ESP-NOW only)';
+                            el.style.color = data.loraRadioPresent ? '#4caf50' : '#888';
+                        }
+                        document.getElementById('readyStatusRows').style.display = data.readyRequired ? 'flex' : 'none';
+                        if (data.readyRequired) {
+                            const redEl = document.getElementById('redReadyStat');
+                            redEl.textContent = data.redReady ? 'READY' : 'NOT READY';
+                            redEl.style.color = data.redReady ? 'green' : 'red';
+                            const blueEl = document.getElementById('blueReadyStat');
+                            blueEl.textContent = data.blueReady ? 'READY' : 'NOT READY';
+                            blueEl.style.color = data.blueReady ? 'green' : 'red';
+                        }
 
                         // Keep display/audio/ready/tapout/sync controls live
                         // even when this page didn't originate the change -
@@ -371,12 +451,21 @@ const char* html = R"rawliteral(
                         const countdownEl = document.getElementById('countdown');
                         if (isTapout) {
                             countdownEl.style.color = data.tapoutBlue ? '#0011ff' : '#ff3333';
+                        } else if (isPaused) {
+                            countdownEl.style.color = '#ffcc00';
+                        } else if (isClockMode) {
+                            // This display never reflects clock mode at all - the
+                            // physical LED digits show the actual wall-clock time
+                            // separately, so this just sits on whatever match time
+                            // was last active. Dimming it signals "not live right
+                            // now" instead of looking like a current, correct time.
+                            countdownEl.style.color = '#555';
                         } else {
                             countdownEl.style.color = 'white';
                         }
 
                         // 1. TIMER BUTTON LOCKOUT
-                        const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn', 'pauseBtn'];
+                        const lockGroup = ['startBtn', 'resetBtn', 'switchBtn', 'setTimeBtn', 'setMatchTimeBtn', 'pauseBtn'];
                         lockGroup.forEach(id => {
                             const btn = document.getElementById(id);
                             if (!btn) return;
@@ -411,9 +500,28 @@ const char* html = R"rawliteral(
                             }
                         });
 
+                        // Independent of match state: processCommand() already
+                        // silently refuses "start" when Require Driver Ready is on
+                        // and someone isn't ready yet - gray the button out to match
+                        // instead of only finding that out by pressing it.
+                        if (data.readyRequired && (!data.redReady || !data.blueReady)) {
+                            const startBtn = document.getElementById('startBtn');
+                            if (startBtn) {
+                                startBtn.classList.add('blocked-feature');
+                                startBtn.disabled = true;
+                            }
+                        }
+
                         // 2. SETTINGS PANEL LOCKOUT
                         const shouldLockSettings = isRunning || isPaused || isTapout || isClockMode;
-                        const sections = ['displaySection', 'wifiSection', 'manualTimeSection', 'audioSection', 'syncSection'];
+                        // displaySettingsContent (not the whole displaySection box) so Clock
+                        // Mode's own toggle - a sibling outside it, see the HTML comment next
+                        // to #clockSection - stays fully visible and clickable even while
+                        // everything else dims, including during CLOCK_MODE itself where it's
+                        // the only way back out. opacity/grayscale can't be undone on a
+                        // descendant once an ancestor has them, so the only way to spare one
+                        // control is to keep it outside the dimmed element entirely.
+                        const sections = ['wifiSection', 'manualTimeSection', 'audioSection', 'syncSection', 'systemStatusSection', 'displaySettingsContent'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -422,17 +530,23 @@ const char* html = R"rawliteral(
                             }
                         });
 
-                        const statusSection = document.getElementById('systemStatusSection');
-                        if (statusSection) {
-                            if (isRunning || isPaused || isTapout) {
-                                statusSection.classList.add('blocked-feature');
-                            } else {
-                                statusSection.classList.remove('blocked-feature');
-                            }
+                        // clockSection gets the narrower isRunning||isPaused||isTapout
+                        // condition, not full shouldLockSettings - it's functionally
+                        // disabled during a match the same way (clockToggle.disabled
+                        // below already covers that), but visually looked exactly like
+                        // every other still-active control, which read as "you could
+                        // tap this mid-match" even though the click silently wouldn't
+                        // do anything. Still excluded from dimming during CLOCK_MODE
+                        // itself, same as always - that's the one state it has to stay
+                        // visibly usable in, to escape clock mode.
+                        const clockSectionEl = document.getElementById('clockSection');
+                        if (clockSectionEl) {
+                            if (isRunning || isPaused || isTapout) clockSectionEl.classList.add('blocked-feature');
+                            else clockSectionEl.classList.remove('blocked-feature');
                         }
 
                         // 3. INDIVIDUAL INPUT COMPONENT DISABLING
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'wifiWipeBtn', 'updateBtn', 'factoryResetBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'syncIpInput', 'syncSaveBtn', 'syncClearBtn'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'wifiWipeBtn', 'updateBtn', 'factoryResetBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'syncIpInput', 'syncSaveBtn', 'syncClearBtn', 'timerNameInput', 'nameSaveBtn'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -462,10 +576,16 @@ const char* html = R"rawliteral(
                     .catch(e => console.error(e));
             }, 1000);
 
-            function updateStatus(id, isPaired) {
+            function updateStatus(id, isPaired, viaLora, viaEspNow) {
                 let el = document.getElementById(id);
-                el.textContent = isPaired ? 'PAIRED' : 'OPEN';
-                el.style.color = isPaired ? 'green' : 'red';
+                if (!isPaired) {
+                    el.textContent = 'OPEN';
+                    el.style.color = 'red';
+                    return;
+                }
+                let via = (viaLora && viaEspNow) ? 'LoRa+ESP-NOW' : viaLora ? 'LoRa' : 'ESP-NOW';
+                el.textContent = `PAIRED (${via})`;
+                el.style.color = 'green';
             }
         </script>
     </body>
