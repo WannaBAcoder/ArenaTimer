@@ -3,11 +3,16 @@
 Remote-side firmware for the battle timer's two supported remote protocols.
 A remote is one or the other - never both, and nothing else:
 
-- **`ESPNOW_Remote/`** - genuine ESP-NOW (ESP8266, `espnow.h`). One shared
-  source (`controller.ino`) builds the Judge remote and both Red/Blue
-  "driver ready" remotes - each physical unit is just flashed with its own
-  `DEV_TYPE`/`PINS`/`BUTTON_IDS` constants at the top of the file. Received
-  by the timer's `espnowRemotes.cpp`.
+- **`ESPNOW_Remote/`** - genuine ESP-NOW (ESP8266, `espnow.h`), each a
+  separate PlatformIO project (not variants of one shared source):
+  - `controller/` - the Judge remote, 5 buttons.
+  - `ready_remote/` - the Red/Blue "driver ready" remote, 1 button. Set
+    `DEV_TYPE` to `"RedReady"` or `"BlueReady"` per physical unit before
+    flashing. Recovered from git history (commit f13efa9) after a later
+    commit overwrote this same filename with an unrelated LLCC68/RadioLib
+    design that was never ESP-NOW at all.
+
+  Both received by the timer's `espnowRemotes.cpp`.
 
 - **`TimerRemote/`** - the correct, current LoRa remote (STM32 + RA-08H
   radio module, talks to the timer's own RA-08H over actual LoRa RF, not
