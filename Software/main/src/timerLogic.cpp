@@ -1,4 +1,5 @@
 #include "TimerLogic.h"
+#include "rceManager.h"
 
 // Reference globals defined in main.ino
 extern int current_time;
@@ -260,6 +261,7 @@ void updateTimer() {
     currentState = FINISHED;
     triggerBeep(1200);
     current_time = 0;
+    rceNotifyLocal(RCE_EV_FINISH);
 
     for (int i = 0; i < BORDER_LED_COUNT; i++) setBorderLEDs(i, CRGB::Black);
     for (int i = 0; i < DIGIT_LED_COUNT; i++) setDigitLEDs(i, CRGB::Black);
@@ -296,6 +298,14 @@ void processCommand(String cmd) {
 
   if (cmd == "start") { 
     if (currentState == IDLE || currentState == PAUSED) { 
+      // RCE mode: the 3-2-1 pre-countdown and the driver-ready gate are
+      // standalone features - the arena manager's start means "clock is
+      // running now", so begin immediately.
+      if (rceModeActive()) {
+          transitionToMatch();
+          rceNotifyLocal(RCE_EV_START);
+          return;
+      }
       if (readyRequired && (!redReady || !blueReady)) { 
           Serial.println("[LOCKOUT] Start denied: Drivers not ready."); 
           return; 
@@ -318,6 +328,7 @@ void processCommand(String cmd) {
 
     triggerBeep(300);
     updateClient();
+    rceNotifyLocal(RCE_EV_PAUSE);
   } 
 
   else if (cmd == "reset") { 
@@ -341,9 +352,10 @@ void processCommand(String cmd) {
         applyDoubleSidedMirror();
         showLeds();
         needsLEDUpdate = false;
+        rceNotifyLocal(RCE_EV_RESET);
     }
   }
-  else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING) {
+  else if ((cmd == "tapoutRed" || cmd == "tapoutBlue") && currentState == RUNNING && !rceModeActive()) {
     if (tapoutEnabled) {
         tapoutInitiatorIsBlue = (cmd == "tapoutBlue");
         currentState = TAPOUT;
@@ -364,7 +376,7 @@ void processCommand(String cmd) {
     setTeamReady("Blue");
   }
 
-  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED)) {
+  else if (cmd == "switch" && (currentState == IDLE || currentState == FINISHED) && !rceModeActive()) {
     countdown_time = (countdown_time == 120) ? 180 : 120;
     current_time = countdown_time;
     bool newTimeSelState = (countdown_time == 180);
@@ -399,6 +411,10 @@ void processCommand(String cmd) {
 }
 
 void setTeamReady(String team) {
+  // RCE mode has no driver-ready concept (nothing reports it, nothing gates
+  // on it), so the ready buttons are inert rather than lighting a border
+  // that means nothing to anyone else.
+  if (rceModeActive()) return;
   bool flip = displayInverted;
   if (team == "Blue") {
       blueReady = true;
@@ -566,5 +582,77 @@ void checkAudioTimeout() {
       noTone(BUZZ_PIN);
       digitalWrite(RELAY_PIN, LOW);
       beepActive = false;
+  }
+}
+
+// --- RCE Manager integration -------------------------------------------------
+
+unsigned long timerRemainingMs() {
+  long ms = (long)current_time * 1000L;
+  if (currentState == RUNNING) {
+    long elapsed = (long)(millis() - lastCountdownTime);
+    if (elapsed > 1000) elapsed = 1000;
+    ms -= elapsed;
+  }
+  return ms < 0 ? 0 : (unsigned long)ms;
+}
+
+// Forces the local state machine to a state published by RCE Manager. Goes
+// through the same code paths as the normal commands wherever one exists
+// (reset flush, pause blink/beep, transition to match) so the display and
+// audio behave exactly as they do for a local button press; the caller sets
+// rceApplying so none of this is echoed back as an outgoing command.
+void rceApplyExternal(int state, int remainingSeconds, int durationSeconds) {
+  if (currentState == CONNECTING) return;
+
+  if (durationSeconds > 0) countdown_time = durationSeconds;   // session-only, not written to NVS
+  if (remainingSeconds < 0) remainingSeconds = 0;
+
+  switch (state) {
+    case IDLE:
+      if (currentState != IDLE) {
+        if (currentState == RUNNING || currentState == PRE_COUNTDOWN_INIT || currentState == PRE_COUNTDOWN_LOOP) {
+          currentState = PAUSED;   // satisfy reset's state guard
+        }
+        processCommand("reset");   // deep flush, back to IDLE at countdown_time
+      }
+      current_time = remainingSeconds;
+      currentState = IDLE;
+      setBorder();
+      updateLEDs();
+      updateClient();
+      break;
+
+    case PAUSED:
+      current_time = remainingSeconds;
+      if (currentState == RUNNING) {
+        processCommand("pause");
+      } else {
+        currentState = PAUSED;
+        lastBlinkTime = 0;
+        blinkState = true;
+        setBorder();
+        updateLEDs();
+        needsLEDUpdate = true;
+        updateClient();
+      }
+      break;
+
+    case RUNNING:
+      current_time = remainingSeconds;
+      if (currentState != RUNNING) {
+        transitionToMatch();   // beep + border + RUNNING; keeps current_time unless it is 0
+      } else {
+        lastCountdownTime = millis();
+        updateLEDs();
+        updateClient();
+      }
+      break;
+
+    case FINISHED:
+      // updateTimer()'s zero branch does the finish display and beep.
+      current_time = 0;
+      if (currentState != FINISHED) currentState = RUNNING;
+      break;
   }
 }

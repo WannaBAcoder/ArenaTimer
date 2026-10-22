@@ -63,6 +63,15 @@ Newer timer boards carry an onboard LoRa radio alongside the original ESP-NOW re
   <img src="images/dual_backend_and_match_time.jpg" alt="Dual ESP-NOW/LoRa pairing status, Match Time, and WiFi management" width="650"/>
 </p>
 
+### 🌐 RCE Manager Integration (Experimental, `rce_integration` branch)
+The timer can act as a hardware timer for an arena in [RCE Manager](https://www.rcemanager.com): their tablet's Start / Pause / Reset drive the display, and the timer's own controls (web page and Judge remote) drive their clock and stream overlays. Enter the event's integration key and arena name in the new **RCE Manager** box; with nothing entered, the timer behaves exactly as before.
+
+In this mode the 3-2-1 countdown, tapouts, driver-ready, the 2/3-minute switch and Multi-Timer Sync are intentionally switched off, since RCE Manager has no equivalent. It has been tested against a mock of their protocol, **not yet against the real service**. Full instructions, what works, what's disabled and what isn't verified yet: **[Software/RCE_MANAGER.md](Software/RCE_MANAGER.md)**.
+
+<p align="center">
+  <img src="images/rce_manager_ui.jpg" alt="RCE Manager box on the timer web page, status online, standalone-only controls grayed out" width="420"/>
+</p>
+
 ### 🔗 Multi-Timer Sync (Web-Based)
 Running several mats off one set of remotes already works by pairing the same remote to each timer directly (above) - but for anything triggered from the **web page** (start/pause/reset, time-select, colors, brightness, audio, ready/tapout settings), pair two timers together over WiFi so clicking a button on one applies to both.
 

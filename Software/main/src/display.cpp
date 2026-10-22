@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "rceManager.h"
 
 extern bool needsLEDUpdate;
 extern bool isDoubleSided;
@@ -145,7 +146,9 @@ void setBorder() {
             setBorderLEDs(i, ORANGE); 
         }
     } 
-    else if (!readyRequired || (redReady && blueReady)) {
+    else if (!readyRequired || rceModeActive() || (redReady && blueReady)) {
+        // (RCE mode has no driver-ready step, so it always shows the team
+        // colors even if "Require Driver Ready" is still saved as on.)
         int startBlue = flip ? BORDER_LED_COUNT/2 : 0;
         int endBlue = flip ? BORDER_LED_COUNT : BORDER_LED_COUNT/2;
         int startRed = flip ? 0 : BORDER_LED_COUNT/2;

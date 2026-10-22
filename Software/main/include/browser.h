@@ -206,6 +206,31 @@ const char* html = R"rawliteral(
             <div style="margin-top:5px; font-size:0.9em;">Currently syncing to: <strong id="syncTargetStat">None</strong></div>
         </div>
 
+        <div id="rceSection" class="status">
+            <h3>RCE Manager</h3>
+            <div>Status: <strong id="rceStatus">off</strong></div>
+            <div id="rceAuthRow" style="display:none;">Clock run by: <strong id="rceAuthority">-</strong></div>
+            <div id="rceErrRow" style="display:none; color:#e57373; font-size:0.85em; margin-top:4px;"></div>
+            <div style="margin-top:10px;">
+                <input type="text" id="rceArena" placeholder="Arena name (exact)" autocapitalize="none" autocorrect="off" oninput="rceDirty=true" style="width:150px; text-align:left; margin:3px;">
+                <input type="text" id="rceDevice" placeholder="Device name" autocapitalize="none" autocorrect="off" maxlength="40" oninput="rceDirty=true" style="width:150px; text-align:left; margin:3px;">
+                <input type="password" id="rceKey" placeholder="Integration key" autocapitalize="none" autocorrect="off" oninput="rceDirty=true" style="padding:8px; width:150px; text-align:left; margin:3px; border-radius:4px; border:1px solid #444;">
+            </div>
+            <div style="margin-top:8px;">
+                <button id="rceSaveBtn" class="small-btn" onclick="saveRce()" style="background:green; color:white;">Connect</button>
+                <button id="rceClearBtn" class="small-btn" onclick="clearRce()" style="background:red; color:white;">Disconnect</button>
+            </div>
+            <details style="margin-top:8px; font-size:0.85em;">
+                <summary>Advanced</summary>
+                <div style="margin-top:6px;">
+                    <input type="text" id="rceHost" placeholder="Host" autocapitalize="none" autocorrect="off" oninput="rceDirty=true" style="width:150px; text-align:left; margin:3px;">
+                    <input type="number" id="rcePort" placeholder="Port" min="1" max="65535" oninput="rceDirty=true" style="width:70px; margin:3px;">
+                    <label style="display:inline;"><input type="checkbox" id="rceTls" onchange="rceDirty=true"> TLS</label>
+                </div>
+            </details>
+            <div style="margin-top:6px; font-size:0.8em; opacity:0.8;">While connected: no 3-2-1 countdown or tapouts, match time comes from RCE Manager, and multi-timer sync is off. Leave the key empty to keep the saved one.</div>
+        </div>
+
         </div>
 
         <script>
@@ -346,6 +371,85 @@ const char* html = R"rawliteral(
             function clearSyncTarget() {
                 fetch('/setsyncip?ip=').then(refreshSyncStatus);
             }
+            let rceDirty = false;
+            let rceKeySaved = false;
+            let rceWasOn = false;
+            function saveRce() {
+                const typedKey = document.getElementById('rceKey').value.trim();
+                if (!typedKey && !rceKeySaved) { alert('Enter the integration key first.'); return; }
+                if (!document.getElementById('rceArena').value.trim()) { alert('Enter the arena name first.'); return; }
+                const q = new URLSearchParams({
+                    arena: document.getElementById('rceArena').value.trim(),
+                    device: document.getElementById('rceDevice').value.trim(),
+                    key: document.getElementById('rceKey').value.trim(),
+                    host: document.getElementById('rceHost').value.trim(),
+                    port: document.getElementById('rcePort').value || '443',
+                    tls: document.getElementById('rceTls').checked ? '1' : '0'
+                });
+                fetch('/rce/set?' + q.toString()).then(r => r.text().then(t => {
+                    if (!r.ok) { alert(t); return; }
+                    document.getElementById('rceKey').value = '';
+                    rceDirty = false;
+                }));
+            }
+            function clearRce() {
+                if (!confirm("Disconnect from RCE Manager and forget the key and arena?")) return;
+                fetch('/rce/clear').then(() => {
+                    document.getElementById('rceKey').value = '';
+                    document.getElementById('rceArena').value = '';
+                    document.getElementById('rceDevice').value = '';
+                    rceDirty = false;
+                });
+            }
+            function applyRceStatus(r) {
+                if (!r) return;
+                const statusEl = document.getElementById('rceStatus');
+                rceKeySaved = !!r.keySet;
+                statusEl.textContent = r.status;
+                statusEl.style.color = r.online ? 'green' : (r.mode ? '#ffcc00' : '');
+                document.getElementById('rceAuthRow').style.display = r.online ? 'block' : 'none';
+                document.getElementById('rceAuthority').textContent = r.authority;
+                const errEl = document.getElementById('rceErrRow');
+                errEl.style.display = r.lastError ? 'block' : 'none';
+                errEl.textContent = r.lastError || '';
+                if (!rceDirty) {
+                    document.getElementById('rceArena').value = r.arena || '';
+                    document.getElementById('rceDevice').value = r.device || '';
+                    document.getElementById('rceHost').value = r.host || '';
+                    document.getElementById('rcePort').value = r.port || 443;
+                    document.getElementById('rceTls').checked = !!r.tls;
+                    document.getElementById('rceKey').placeholder = r.keySet ? 'Key saved' : 'Integration key';
+                }
+                // In RCE mode the standalone-only controls are inert (the firmware
+                // ignores them too) - hide or gray them so they don't look usable.
+                const rceOn = !!r.mode;
+                const syncEl = document.getElementById('syncSection');
+                if (syncEl) syncEl.style.display = rceOn ? 'none' : '';
+                // Only ever ADD the graying while RCE mode is on. The match-state
+                // lockout above owns these same controls the rest of the time
+                // (it re-applies or clears them on every poll), so this must not
+                // touch them when RCE mode is off - un-graying here is what made
+                // Switch 2/3m look usable mid-match.
+                if (rceOn) {
+                    ['manualTimeSection', 'switchBtn', 'tapoutToggle', 'readyToggle'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        el.classList.add('blocked-feature');
+                        if (el.querySelectorAll) el.querySelectorAll('input,button').forEach(c => c.disabled = true);
+                        if ('disabled' in el) el.disabled = true;
+                    });
+                } else if (rceWasOn) {
+                    // Just left RCE mode: undo only what was applied above. The
+                    // lockout code restores everything else on its next pass.
+                    ['tapoutToggle', 'readyToggle'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.classList.remove('blocked-feature');
+                    });
+                    const mt = document.getElementById('manualTimeSection');
+                    if (mt) mt.querySelectorAll('input,button').forEach(c => c.disabled = false);
+                }
+                rceWasOn = rceOn;
+            }
             function startPairing() { fetch('/pair'); }
             function wipeRemotes() { if(confirm("Wipe all remotes?")) fetch('/clear_remotes'); }
             function wipeWifi() { if(confirm("Clear saved WiFi credentials and reboot into setup mode?")) fetch('/clearwifi'); }
@@ -398,8 +502,9 @@ const char* html = R"rawliteral(
                             el.textContent = data.loraRadioPresent ? 'Detected' : 'Not detected (ESP-NOW only)';
                             el.style.color = data.loraRadioPresent ? '#4caf50' : '#888';
                         }
-                        document.getElementById('readyStatusRows').style.display = data.readyRequired ? 'flex' : 'none';
-                        if (data.readyRequired) {
+                        const rceOnNow = !!(data.rce && data.rce.mode);
+                        document.getElementById('readyStatusRows').style.display = (data.readyRequired && !rceOnNow) ? 'flex' : 'none';
+                        if (data.readyRequired && !rceOnNow) {
                             const redEl = document.getElementById('redReadyStat');
                             redEl.textContent = data.redReady ? 'READY' : 'NOT READY';
                             redEl.style.color = data.redReady ? 'green' : 'red';
@@ -504,7 +609,7 @@ const char* html = R"rawliteral(
                         // silently refuses "start" when Require Driver Ready is on
                         // and someone isn't ready yet - gray the button out to match
                         // instead of only finding that out by pressing it.
-                        if (data.readyRequired && (!data.redReady || !data.blueReady)) {
+                        if (data.readyRequired && !(data.rce && data.rce.mode) && (!data.redReady || !data.blueReady)) {
                             const startBtn = document.getElementById('startBtn');
                             if (startBtn) {
                                 startBtn.classList.add('blocked-feature');
@@ -521,7 +626,7 @@ const char* html = R"rawliteral(
                         // the only way back out. opacity/grayscale can't be undone on a
                         // descendant once an ancestor has them, so the only way to spare one
                         // control is to keep it outside the dimmed element entirely.
-                        const sections = ['wifiSection', 'manualTimeSection', 'audioSection', 'syncSection', 'systemStatusSection', 'displaySettingsContent'];
+                        const sections = ['wifiSection', 'manualTimeSection', 'audioSection', 'syncSection', 'rceSection', 'systemStatusSection', 'displaySettingsContent'];
                         sections.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -546,7 +651,7 @@ const char* html = R"rawliteral(
                         }
 
                         // 3. INDIVIDUAL INPUT COMPONENT DISABLING
-                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'wifiWipeBtn', 'updateBtn', 'factoryResetBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'syncIpInput', 'syncSaveBtn', 'syncClearBtn', 'timerNameInput', 'nameSaveBtn'];
+                        const inputs = ['pairBtn', 'wipeBtn', 'wifiSSID', 'wifiPass', 'wifiBtn', 'wifiWipeBtn', 'updateBtn', 'factoryResetBtn', 'clockToggle', 'readyToggle', 'tapoutToggle', 'colorPicker', 'brightSlider', 'flipToggle', 'audioToggle', 'remoteAudioToggle', 'syncIpInput', 'syncSaveBtn', 'syncClearBtn', 'timerNameInput', 'nameSaveBtn', 'rceArena', 'rceDevice', 'rceKey', 'rceHost', 'rcePort', 'rceTls', 'rceSaveBtn', 'rceClearBtn'];
                         inputs.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
@@ -572,6 +677,8 @@ const char* html = R"rawliteral(
                             if (data.tapoutEnabled !== undefined) document.getElementById('tapoutToggle').checked = data.tapoutEnabled;
                             if (data.remoteAudioEnabled !== undefined) document.getElementById('remoteAudioToggle').checked = data.remoteAudioEnabled;
                         }
+
+                        applyRceStatus(data.rce);
                     })
                     .catch(e => console.error(e));
             }, 1000);
