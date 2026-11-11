@@ -2841,7 +2841,7 @@
 		)
 	)
 	(rectangle
-		(start 250.19 119.38)
+		(start 248.92 119.38)
 		(end 346.71 148.59)
 		(stroke
 			(width 0.635)
@@ -2889,7 +2889,7 @@
 	)
 	(text "https://www.ti.com/lit/an/swra730/swra730.pdf"
 		(exclude_from_sim no)
-		(at 312.166 144.526 0)
+		(at 316.23 146.05 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2935,7 +2935,7 @@
 	)
 	(text "TI Reference Antenna & BOM"
 		(exclude_from_sim no)
-		(at 313.182 140.208 0)
+		(at 317.246 141.732 0)
 		(effects
 			(font
 				(size 2.54 2.54)
@@ -2976,10 +2976,16 @@
 		(uuid "156bea09-fcf9-494a-8ed1-5b9a61584491")
 	)
 	(junction
-		(at 275.59 130.81)
+		(at 262.89 130.81)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "357b10ef-d309-46e1-87f0-978f1e677025")
+		(uuid "3e97e4c9-d799-405c-b6b7-d2cbcdf141a6")
+	)
+	(junction
+		(at 281.94 130.81)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "744ae043-1986-4095-a61c-6e74631936c9")
 	)
 	(junction
 		(at 204.47 107.95)
@@ -3107,6 +3113,16 @@
 	)
 	(wire
 		(pts
+			(xy 262.89 130.81) (xy 267.97 130.81)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "01094d29-2ed5-4cfe-9886-54f830dd8bdf")
+	)
+	(wire
+		(pts
 			(xy 316.23 193.04) (xy 331.47 193.04)
 		)
 		(stroke
@@ -3217,7 +3233,7 @@
 	)
 	(wire
 		(pts
-			(xy 259.08 130.81) (xy 275.59 130.81)
+			(xy 259.08 130.81) (xy 262.89 130.81)
 		)
 		(stroke
 			(width 0)
@@ -3337,7 +3353,7 @@
 	)
 	(wire
 		(pts
-			(xy 288.29 130.81) (xy 302.26 130.81)
+			(xy 275.59 130.81) (xy 302.26 130.81)
 		)
 		(stroke
 			(width 0)
@@ -3447,6 +3463,16 @@
 	)
 	(wire
 		(pts
+			(xy 281.94 132.08) (xy 281.94 130.81)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6080b451-bee7-4ce7-98d1-1b44826caaa7")
+	)
+	(wire
+		(pts
 			(xy 88.9 97.79) (xy 88.9 99.06)
 		)
 		(stroke
@@ -3474,6 +3500,16 @@
 			(type default)
 		)
 		(uuid "6b4f0081-fc1b-4c98-8acd-c443feb14b70")
+	)
+	(wire
+		(pts
+			(xy 281.94 140.97) (xy 281.94 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "747085de-34a6-4d53-91b6-8a5de875bfa9")
 	)
 	(wire
 		(pts
@@ -3527,7 +3563,7 @@
 	)
 	(wire
 		(pts
-			(xy 275.59 140.97) (xy 275.59 139.7)
+			(xy 262.89 140.97) (xy 262.89 139.7)
 		)
 		(stroke
 			(width 0)
@@ -3584,16 +3620,6 @@
 			(type default)
 		)
 		(uuid "8cba23e9-b896-4635-931e-28c4ea276813")
-	)
-	(wire
-		(pts
-			(xy 275.59 130.81) (xy 280.67 130.81)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8f53bcb3-23f0-43c5-99ab-f76ce3131670")
 	)
 	(wire
 		(pts
@@ -3967,7 +3993,7 @@
 	)
 	(wire
 		(pts
-			(xy 275.59 130.81) (xy 275.59 132.08)
+			(xy 262.89 130.81) (xy 262.89 132.08)
 		)
 		(stroke
 			(width 0)
@@ -4326,108 +4352,6 @@
 		(uuid "ff00451b-927e-40c0-a6ca-9948653ac7b1")
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 306.07 130.81 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "021eab51-936f-45f1-8ce0-89d71e85cc67")
-		(property "Reference" "C18"
-			(at 306.07 123.19 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "2pF"
-			(at 306.07 125.73 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 309.88 129.8448 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 306.07 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 306.07 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C1558"
-			(at 306.07 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" ""
-			(at 306.07 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "1e8d9d8c-2f91-4312-9db0-cc030ba939ab")
-		)
-		(pin "2"
-			(uuid "ce30236b-2f5c-4c1a-9831-40a6ee71c28d")
-		)
-		(instances
-			(project "TimerRemote"
-				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "C18")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+3.3V")
 		(at 187.96 106.68 0)
 		(unit 1)
@@ -4767,7 +4691,7 @@
 	)
 	(symbol
 		(lib_id "Device:R_US")
-		(at 284.48 130.81 90)
+		(at 271.78 130.81 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4777,8 +4701,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1b9c56c8-63ff-4586-88bf-6e992106e94f")
-		(property "Reference" "R6"
-			(at 284.48 124.46 90)
+		(property "Reference" "X3"
+			(at 271.78 124.46 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4787,8 +4711,8 @@
 				)
 			)
 		)
-		(property "Value" "0 ohm"
-			(at 284.48 127 90)
+		(property "Value" "6.2nH"
+			(at 271.78 127 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4798,7 +4722,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 284.734 129.794 90)
+			(at 272.034 129.794 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4809,7 +4733,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 284.48 130.81 0)
+			(at 271.78 130.81 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4820,7 +4744,7 @@
 			)
 		)
 		(property "Description" "RES, 0 ohm, 1/20W, 1%, 0402"
-			(at 284.48 130.81 0)
+			(at 271.78 130.81 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4830,8 +4754,8 @@
 				)
 			)
 		)
-		(property "LCSC" "C17168"
-			(at 284.48 130.81 90)
+		(property "LCSC" "C7515369"
+			(at 271.78 130.81 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4841,8 +4765,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" ""
-			(at 284.48 130.81 90)
+		(property "MPN" "LQ15HN6N2B02"
+			(at 271.78 130.81 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4861,7 +4785,7 @@
 		(instances
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "R6")
+					(reference "X3")
 					(unit 1)
 				)
 			)
@@ -5615,6 +5539,83 @@
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
 					(reference "H3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 281.94 140.97 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "3747273a-65d0-4dd9-80b4-79f6148410ea")
+		(property "Reference" "#PWR048"
+			(at 281.94 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 281.94 145.034 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 281.94 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 281.94 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 281.94 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "96735a4d-7ae3-44f9-80c6-3745b6084dbe")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)
@@ -6620,7 +6621,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 275.59 140.97 0)
+		(at 262.89 140.97 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -6630,7 +6631,7 @@
 		(dnp no)
 		(uuid "7db428be-41bf-40b2-bd4d-54fcc2eb15bc")
 		(property "Reference" "#PWR047"
-			(at 275.59 147.32 0)
+			(at 262.89 147.32 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6641,7 +6642,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 275.59 145.034 0)
+			(at 262.89 145.034 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6651,7 +6652,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 275.59 140.97 0)
+			(at 262.89 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6662,7 +6663,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 275.59 140.97 0)
+			(at 262.89 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6673,7 +6674,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 275.59 140.97 0)
+			(at 262.89 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7213,7 +7214,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "bccf76f3-2672-40cd-92b1-35c0182c1619")
-		(property "Reference" "R5"
+		(property "Reference" "X1"
 			(at 255.27 124.46 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7297,7 +7298,7 @@
 		(instances
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "R5")
+					(reference "X1")
 					(unit 1)
 				)
 			)
@@ -7941,18 +7942,18 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 275.59 135.89 0)
+		(at 262.89 135.89 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ce75e355-79c2-48ed-8d29-5a417c23a923")
-		(property "Reference" "C17"
-			(at 279.4 134.6199 0)
+		(property "Reference" "X2"
+			(at 266.7 134.6199 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7963,7 +7964,7 @@
 			)
 		)
 		(property "Value" "4.7pF"
-			(at 279.4 137.1599 0)
+			(at 266.7 137.1599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7974,7 +7975,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 276.5552 139.7 0)
+			(at 263.8552 139.7 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7985,7 +7986,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 275.59 135.89 0)
+			(at 262.89 135.89 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7996,7 +7997,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 275.59 135.89 0)
+			(at 262.89 135.89 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8006,8 +8007,8 @@
 				)
 			)
 		)
-		(property "MPN" "GRM0335C1H4R3CA01"
-			(at 275.59 135.89 90)
+		(property "MPN" "GJM1555C1H4R7BB01"
+			(at 262.89 135.89 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8017,8 +8018,8 @@
 				)
 			)
 		)
-		(property "LCSC" "C1569"
-			(at 275.59 135.89 0)
+		(property "LCSC" "C161327"
+			(at 262.89 135.89 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8029,7 +8030,7 @@
 			)
 		)
 		(property "Manufacturer" ""
-			(at 275.59 135.89 0)
+			(at 262.89 135.89 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8048,7 +8049,7 @@
 		(instances
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "C17")
+					(reference "X2")
 					(unit 1)
 				)
 			)
@@ -8226,6 +8227,121 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 281.94 135.89 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "d50f0a4b-61dd-4778-9e45-69bc569eb0ef")
+		(property "Reference" "X4"
+			(at 285.75 134.6199 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "4.7pF"
+			(at 285.75 137.1599 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 282.9052 139.7 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 281.94 135.89 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 281.94 135.89 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "GRM0335C1H4R3CA01"
+			(at 281.94 135.89 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C1569"
+			(at 281.94 135.89 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 281.94 135.89 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "0b5a208c-7b94-496a-831c-7448a6a9e021")
+		)
+		(pin "2"
+			(uuid "66c670b4-417d-40b4-9985-6a6e608fb3af")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "X4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 88.9 110.49 0)
 		(unit 1)
@@ -8297,6 +8413,108 @@
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
 					(reference "#PWR018")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_US")
+		(at 306.07 130.81 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f6fd4d20-790f-4cf6-b5c9-fb15a283e4aa")
+		(property "Reference" "X5"
+			(at 306.07 124.46 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "0 ohm"
+			(at 306.07 127 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 306.324 129.794 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 306.07 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "RES, 0 ohm, 1/20W, 1%, 0402"
+			(at 306.07 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C17168"
+			(at 306.07 130.81 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 306.07 130.81 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a473c30f-30fb-45a7-97a7-95bfd6349728")
+		)
+		(pin "2"
+			(uuid "e0dcfba8-5d6c-471e-a382-cad5f7a80468")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "X5")
 					(unit 1)
 				)
 			)
