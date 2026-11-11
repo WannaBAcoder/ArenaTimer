@@ -2994,12 +2994,6 @@
 		(uuid "ae5868e5-3d8c-4334-a715-50440a7691a4")
 	)
 	(junction
-		(at 265.43 130.81)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ca93e2f4-b2d0-429a-af46-38a3452e6b1f")
-	)
-	(junction
 		(at 224.79 162.56)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3223,7 +3217,7 @@
 	)
 	(wire
 		(pts
-			(xy 265.43 130.81) (xy 275.59 130.81)
+			(xy 259.08 130.81) (xy 275.59 130.81)
 		)
 		(stroke
 			(width 0)
@@ -3423,16 +3417,6 @@
 	)
 	(wire
 		(pts
-			(xy 265.43 140.97) (xy 265.43 139.7)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5232f4cc-9cdd-4ceb-ac9f-3b40be717982")
-	)
-	(wire
-		(pts
 			(xy 144.78 138.43) (xy 158.75 138.43)
 		)
 		(stroke
@@ -3520,16 +3504,6 @@
 			(type default)
 		)
 		(uuid "7a18536b-d174-498d-9907-1be00243b34e")
-	)
-	(wire
-		(pts
-			(xy 259.08 130.81) (xy 265.43 130.81)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7f2245e9-14ad-46f0-919f-3b28f97fe73d")
 	)
 	(wire
 		(pts
@@ -4000,16 +3974,6 @@
 			(type default)
 		)
 		(uuid "f8b9c439-6a55-41cd-bdc2-e0705a6aadd7")
-	)
-	(wire
-		(pts
-			(xy 265.43 130.81) (xy 265.43 132.08)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f9a9869c-6eb0-4d4d-88e7-2e75daec9891")
 	)
 	(label "MCU_UART_TX"
 		(at 255.27 152.4 180)
@@ -5864,83 +5828,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 265.43 140.97 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "4be76e0d-4538-44c9-919e-be9d53d0eaec")
-		(property "Reference" "#PWR046"
-			(at 265.43 147.32 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 265.43 145.034 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 265.43 140.97 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 265.43 140.97 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 265.43 140.97 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "95362fa1-2333-4db8-8aab-fcc73eaf2570")
-		)
-		(instances
-			(project "TimerRemote"
-				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "#PWR046")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R_US")
 		(at 99.06 152.4 0)
 		(mirror y)
@@ -6219,110 +6106,6 @@
 			(project "TimerRemote"
 				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
 					(reference "H2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 265.43 135.89 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(fields_autoplaced yes)
-		(uuid "63aea450-e96d-499a-8c87-cad560ef9c5c")
-		(property "Reference" "C16"
-			(at 269.24 134.6199 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "C"
-			(at 269.24 137.1599 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 266.3952 139.7 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 265.43 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 265.43 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "DNU"
-			(at 265.43 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" ""
-			(at 265.43 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "db9e2d4c-547f-4148-abc6-b614c3e4e437")
-		)
-		(pin "2"
-			(uuid "e86fdf8e-4b79-46c2-a942-efb49bce04bf")
-		)
-		(instances
-			(project "TimerRemote"
-				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
-					(reference "C16")
 					(unit 1)
 				)
 			)

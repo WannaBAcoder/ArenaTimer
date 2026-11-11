@@ -552,8 +552,8 @@
     "meta": {
       "version": 5
     },
-    "net_colors": {},
-    "netclass_assignments": {},
+    "net_colors": null,
+    "netclass_assignments": null,
     "netclass_patterns": []
   },
   "pcbnew": {
@@ -683,7 +683,7 @@
         "uuid": "a502d111-869c-4ffb-960f-5db266c8a405"
       }
     ],
-    "used_designators": "#PWR6,#PWR51-53,#PWR55-70,#PWR73-74,#PWR76,#PWR79-80,#PWR82-83,#PWR86-87,#PWR92,#PWR98-100,C19-21,C24,C27,C31,D10,D14,J4-5,JP3,Q3-4,R7-12,R15-16,R26,R28,R30,SW1,SW7,TP5-11,U3,U5",
+    "used_designators": "",
     "variants": []
   },
   "sheets": [

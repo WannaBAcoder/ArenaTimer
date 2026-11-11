@@ -20,9 +20,8 @@
 // A remote only ever transmits (button presses) - it never needs to
 // receive - so RF_RX_MODE = 0 (TX-only) lets the radio sleep between sends
 // instead of idling in its most power-hungry state (continuous RX) for no
-// functional benefit. Left at 1 (continuous, matching the radio's own
-// compiled-in default - i.e. no behavior change) until that's actually been
-// measured and validated on hardware; flip to 0 once confirmed worthwhile.
-#define RF_RX_MODE 1 // 0 = TX-only (sleep between sends), 1 = continuous RX
+// functional benefit. Set to 0 for remotes. (The timer's own rfConfig.h must
+// stay at 1 - it is the side that listens.)
+#define RF_RX_MODE 0 // 0 = TX-only (sleep between sends), 1 = continuous RX
 
 #endif
