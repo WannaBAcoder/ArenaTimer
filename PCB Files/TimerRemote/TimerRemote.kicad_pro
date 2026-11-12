@@ -39,9 +39,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.762,
-          "height": 1.524,
-          "width": 1.524
+          "drill": 0.0,
+          "height": 1.0,
+          "width": 1.0
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -78,11 +78,23 @@
       ],
       "drc_exclusions": [
         [
-          "courtyards_overlap|155559276|90080848|4ba103e9-f46a-41ec-ac18-ad3e9f441d83|d10f96b7-b2d6-4d9b-b590-25b38404aff6",
+          "courtyards_overlap|146368938|54813951|29cd0cfa-bd96-45d8-af60-52bdd7f45733|a56ab74f-076c-4003-b4d0-ccea4f8ec910",
           ""
         ],
         [
-          "lib_footprint_mismatch|163930476|132147148|e989f2f3-5959-4ed7-b16d-e2285bfb603c|00000000-0000-0000-0000-000000000000",
+          "courtyards_overlap|147254090|56445000|29cd0cfa-bd96-45d8-af60-52bdd7f45733|47a80a85-718f-4154-a7f1-547413e2319c",
+          ""
+        ],
+        [
+          "courtyards_overlap|147825000|60357627|742202b7-2d17-48af-8785-0a0a6c90f796|d2f7ad70-4c83-4bda-aba2-8b8f633d0f97",
+          ""
+        ],
+        [
+          "courtyards_overlap|150795000|59702381|40712b8a-5d87-48e0-bdca-ffafb1e3889e|87c82cdd-b08b-4840-b4cb-7396fb3adac3",
+          ""
+        ],
+        [
+          "courtyards_overlap|174942476|52720089|5aca5827-e1e9-4fb8-9f09-9282e180d79c|ebe4da3c-42b3-4555-a309-db823671f495",
           ""
         ]
       ],
@@ -188,7 +200,6 @@
         {
           "td_allow_use_two_tracks": true,
           "td_curve_segcount": 0,
-          "td_enabled": false,
           "td_height_ratio": 1.0,
           "td_length_ratio": 0.5,
           "td_maxheight": 2.0,
@@ -200,7 +211,6 @@
         {
           "td_allow_use_two_tracks": true,
           "td_curve_segcount": 0,
-          "td_enabled": false,
           "td_height_ratio": 1.0,
           "td_length_ratio": 0.5,
           "td_maxheight": 2.0,
@@ -212,7 +222,6 @@
         {
           "td_allow_use_two_tracks": true,
           "td_curve_segcount": 0,
-          "td_enabled": false,
           "td_height_ratio": 1.0,
           "td_length_ratio": 0.5,
           "td_maxheight": 2.0,
@@ -552,8 +561,8 @@
     "meta": {
       "version": 5
     },
-    "net_colors": {},
-    "netclass_assignments": {},
+    "net_colors": null,
+    "netclass_assignments": null,
     "netclass_patterns": []
   },
   "pcbnew": {
@@ -683,7 +692,7 @@
         "uuid": "a502d111-869c-4ffb-960f-5db266c8a405"
       }
     ],
-    "used_designators": "#PWR48,C18,R7",
+    "used_designators": "D11,#PWR71,R18",
     "variants": []
   },
   "sheets": [
