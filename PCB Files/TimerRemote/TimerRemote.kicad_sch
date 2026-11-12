@@ -3297,6 +3297,17 @@
 		)
 		(uuid "b00f536d-1776-4f28-9dac-b23dcb29ef4c")
 	)
+	(text "Populate RA for inducating judge remote\nPopulate RB to indicate Blue ready remote"
+		(exclude_from_sim no)
+		(at 81.534 175.768 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "cbc80b2a-fafa-4f9c-bb32-ee70286c7521")
+	)
 	(text "Radio: RA-08H"
 		(exclude_from_sim no)
 		(at 218.44 93.726 0)
@@ -3308,6 +3319,12 @@
 			)
 		)
 		(uuid "eca4562d-4520-40eb-8074-9bae65607ac5")
+	)
+	(junction
+		(at 76.2 168.91)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "09653ad8-e577-4726-8373-1140f5b6bdd5")
 	)
 	(junction
 		(at 187.96 107.95)
@@ -3368,10 +3385,6 @@
 		(uuid "0c7ad63a-aac0-4047-bad5-48850890ef44")
 	)
 	(no_connect
-		(at 109.22 161.29)
-		(uuid "1ecbd363-0e7b-4914-8578-d28b15c98a79")
-	)
-	(no_connect
 		(at 240.03 139.7)
 		(uuid "2114ffc2-09ec-4da3-b9b0-7ef0ed2303c3")
 	)
@@ -3394,10 +3407,6 @@
 	(no_connect
 		(at 240.03 134.62)
 		(uuid "6a568634-5834-48db-b7ec-3e9997d75794")
-	)
-	(no_connect
-		(at 109.22 158.75)
-		(uuid "6b7dceb3-89ad-47a9-b4c0-d69f89ea7e62")
 	)
 	(no_connect
 		(at 240.03 147.32)
@@ -3489,7 +3498,7 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 146.05) (xy 109.22 146.05)
+			(xy 67.31 146.05) (xy 109.22 146.05)
 		)
 		(stroke
 			(width 0)
@@ -3679,7 +3688,7 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 157.48) (xy 99.06 156.21)
+			(xy 67.31 157.48) (xy 67.31 156.21)
 		)
 		(stroke
 			(width 0)
@@ -3759,6 +3768,16 @@
 	)
 	(wire
 		(pts
+			(xy 83.82 158.75) (xy 76.2 158.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4bb1489c-fcef-4f92-a9da-730297b73fd4")
+	)
+	(wire
+		(pts
 			(xy 204.47 110.49) (xy 204.47 107.95)
 		)
 		(stroke
@@ -3799,6 +3818,16 @@
 	)
 	(wire
 		(pts
+			(xy 109.22 161.29) (xy 100.33 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5dea81f7-afa9-48ed-87f0-08b3e57a04e0")
+	)
+	(wire
+		(pts
 			(xy 281.94 132.08) (xy 281.94 130.81)
 		)
 		(stroke
@@ -3816,6 +3845,16 @@
 			(type default)
 		)
 		(uuid "60e38e5f-261a-49df-bc4b-d323079e7d31")
+	)
+	(wire
+		(pts
+			(xy 91.44 158.75) (xy 109.22 158.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "68a3af0f-e6f2-46b6-9916-c458cb95ad81")
 	)
 	(wire
 		(pts
@@ -3886,6 +3925,16 @@
 			(type default)
 		)
 		(uuid "7fefc93d-072a-424d-9a31-c9b3534af6b6")
+	)
+	(wire
+		(pts
+			(xy 76.2 168.91) (xy 83.82 168.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "838ab3c0-a017-4b2d-9941-a8d52f07f137")
 	)
 	(wire
 		(pts
@@ -4089,6 +4138,16 @@
 	)
 	(wire
 		(pts
+			(xy 100.33 161.29) (xy 100.33 168.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a92ebcad-ab3a-4828-acbd-60f0fee5b519")
+	)
+	(wire
+		(pts
 			(xy 187.96 107.95) (xy 204.47 107.95)
 		)
 		(stroke
@@ -4129,6 +4188,16 @@
 	)
 	(wire
 		(pts
+			(xy 91.44 168.91) (xy 100.33 168.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "af6c0d6a-25a4-4ba7-8628-f22a969f847a")
+	)
+	(wire
+		(pts
 			(xy 194.31 144.78) (xy 194.31 143.51)
 		)
 		(stroke
@@ -4149,7 +4218,7 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 148.59) (xy 99.06 146.05)
+			(xy 67.31 148.59) (xy 67.31 146.05)
 		)
 		(stroke
 			(width 0)
@@ -4339,6 +4408,16 @@
 	)
 	(wire
 		(pts
+			(xy 76.2 158.75) (xy 76.2 168.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ef392fc2-8ef6-4e2a-8a57-1e98290ffc04")
+	)
+	(wire
+		(pts
 			(xy 166.37 238.76) (xy 166.37 240.03)
 		)
 		(stroke
@@ -4376,6 +4455,16 @@
 			(type default)
 		)
 		(uuid "f8b9c439-6a55-41cd-bdc2-e0705a6aadd7")
+	)
+	(wire
+		(pts
+			(xy 76.2 168.91) (xy 76.2 177.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fcf234cd-4a0a-4881-89f4-68a428034b18")
 	)
 	(label "MCU_UART_TX"
 		(at 255.27 152.4 180)
@@ -4698,7 +4787,7 @@
 		(uuid "c7746f96-ace8-45b1-bced-7a25817ad405")
 	)
 	(label "BOOT0"
-		(at 99.06 146.05 0)
+		(at 67.31 146.05 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5028,7 +5117,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C25744"
+		(property "LCSC" "C2906861"
 			(at 194.31 139.7 0)
 			(hide yes)
 			(show_name no)
@@ -6206,40 +6295,38 @@
 	)
 	(symbol
 		(lib_id "Device:R_US")
-		(at 99.06 152.4 0)
-		(mirror y)
+		(at 87.63 158.75 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
-		(uuid "5cb4657d-afa5-47aa-842a-7f575e417bf7")
-		(property "Reference" "R19"
-			(at 96.52 151.1299 0)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "516dfc6b-00fa-4016-8fce-0a1dd75bd472")
+		(property "Reference" "RA1"
+			(at 87.63 152.4 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
-		(property "Value" "10k, 1%"
-			(at 96.52 153.6699 0)
+		(property "Value" "0 ohm"
+			(at 87.63 154.94 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 98.044 152.654 90)
+			(at 87.884 157.734 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6250,7 +6337,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 99.06 152.4 0)
+			(at 87.63 158.75 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6260,8 +6347,8 @@
 				)
 			)
 		)
-		(property "Description" "RES, 10k, 1/20W, 1%, 0402"
-			(at 99.06 152.4 0)
+		(property "Description" "RES, 0 ohm, 1/20W, 1%, 0402"
+			(at 87.63 158.75 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6271,8 +6358,8 @@
 				)
 			)
 		)
-		(property "LCSC" "C25744"
-			(at 99.06 152.4 0)
+		(property "LCSC" "C17168"
+			(at 87.63 158.75 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6283,7 +6370,111 @@
 			)
 		)
 		(property "Manufacturer" ""
-			(at 99.06 152.4 0)
+			(at 87.63 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "84e8ad68-e46d-4abb-a652-f0ff35691c56")
+		)
+		(pin "2"
+			(uuid "ec42e642-eedb-4908-8e48-3cf66235a839")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "RA1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_US")
+		(at 67.31 152.4 0)
+		(mirror y)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "5cb4657d-afa5-47aa-842a-7f575e417bf7")
+		(property "Reference" "R19"
+			(at 64.77 151.1299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10k, 1%"
+			(at 64.77 153.6699 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 66.294 152.654 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 67.31 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "RES, 10k, 1/20W, 1%, 0402"
+			(at 67.31 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C2906861"
+			(at 67.31 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 67.31 152.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7149,6 +7340,83 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 76.2 177.8 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "87f66b68-461e-41a6-a481-8e711fb1f703")
+		(property "Reference" "#PWR031"
+			(at 76.2 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 76.2 181.864 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 76.2 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 76.2 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 76.2 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8162921f-338c-4b05-8a73-7129ceb7a108")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "#PWR031")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C")
 		(at 105.41 105.41 0)
 		(unit 1)
@@ -7915,7 +8183,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 99.06 157.48 0)
+		(at 67.31 157.48 0)
 		(mirror y)
 		(unit 1)
 		(body_style 1)
@@ -7926,7 +8194,7 @@
 		(dnp no)
 		(uuid "c972a536-39e3-4501-9461-7c347a68dfb1")
 		(property "Reference" "#PWR023"
-			(at 99.06 163.83 0)
+			(at 67.31 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7937,7 +8205,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 99.06 161.544 0)
+			(at 67.31 161.544 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7947,7 +8215,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 99.06 157.48 0)
+			(at 67.31 157.48 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7958,7 +8226,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 99.06 157.48 0)
+			(at 67.31 157.48 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7969,7 +8237,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 99.06 157.48 0)
+			(at 67.31 157.48 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8821,6 +9089,108 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R_US")
+		(at 87.63 168.91 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "dc1ad283-c14b-445c-82f2-1233241151f5")
+		(property "Reference" "RB1"
+			(at 87.63 162.56 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "0 ohm"
+			(at 87.63 165.1 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 87.884 167.894 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 87.63 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "RES, 0 ohm, 1/20W, 1%, 0402"
+			(at 87.63 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C17168"
+			(at 87.63 168.91 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" ""
+			(at 87.63 168.91 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "fa3c678a-12a3-4536-9ccd-169417f873b0")
+		)
+		(pin "2"
+			(uuid "d52b9e77-10fa-4ac1-932b-db39af08ad93")
+		)
+		(instances
+			(project "TimerRemote"
+				(path "/a502d111-869c-4ffb-960f-5db266c8a405"
+					(reference "RB1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:VDD")
 		(at 170.18 127 0)
 		(unit 1)
@@ -9030,7 +9400,7 @@
 				)
 			)
 		)
-		(property "Description" "RES, 2.2k, 1/20W, 1%, 0402"
+		(property "Description" "RES, 470, 1/20W, 1%, 0402"
 			(at 170.18 140.97 0)
 			(hide yes)
 			(show_name no)
@@ -9052,7 +9422,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C25879"
+		(property "LCSC" "C25117"
 			(at 170.18 140.97 0)
 			(hide yes)
 			(show_name no)

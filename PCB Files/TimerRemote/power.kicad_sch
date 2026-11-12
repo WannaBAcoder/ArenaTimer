@@ -3282,7 +3282,7 @@
 	)
 	(text "Battery Connector"
 		(exclude_from_sim no)
-		(at 260.096 151.638 0)
+		(at 255.016 151.638 0)
 		(effects
 			(font
 				(size 2.54 2.54)
@@ -3314,7 +3314,7 @@
 		)
 		(uuid "6f7221ef-908c-4a39-8e58-bf6c16cb4e2f")
 	)
-	(text "0.5C charge rate = 200mA"
+	(text "0.5C charge rate = 150mA"
 		(exclude_from_sim no)
 		(at 164.084 160.02 0)
 		(effects
@@ -6720,7 +6720,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C25744 "
+		(property "LCSC" "C2906861"
 			(at 191.77 149.86 0)
 			(hide yes)
 			(show_name no)
@@ -7410,7 +7410,7 @@
 		(fields_autoplaced yes)
 		(uuid "8f7f43f3-82d4-4a48-89a9-67d14c8821b7")
 		(property "Reference" "J5"
-			(at 232.41 149.8599 0)
+			(at 232.41 151.1299 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7420,7 +7420,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "CONFIRM"
+		(property "Value" ""
 			(at 232.41 152.3999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8398,7 +8398,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "2.2k 1%"
+		(property "Value" "6.2k 1%"
 			(at 151.13 156.2099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8431,7 +8431,7 @@
 				)
 			)
 		)
-		(property "Description" "RES, 2.2k, 1/20W, 1%, 0402"
+		(property "Description" "RES, 6.2k, 1/20W, 1%, 0402"
 			(at 148.59 154.94 0)
 			(hide yes)
 			(show_name no)
@@ -8453,7 +8453,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C25879"
+		(property "LCSC" "C25915"
 			(at 148.59 154.94 0)
 			(hide yes)
 			(show_name no)
