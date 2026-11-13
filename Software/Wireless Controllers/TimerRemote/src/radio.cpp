@@ -1,6 +1,7 @@
 #include "radio.h"
 #include "config.h"
 #include "rfConfig.h"
+#include "radioFlash.h"
 #include <Arduino.h>
 #include <string.h>
 
@@ -8,6 +9,9 @@
 static HardwareSerial radioSerial(PIN_RADIO_RX, PIN_RADIO_TX);
 // One-way debug output only, to J2 pin 5. No RX wired, hence NC.
 static HardwareSerial debugSerial(NC, PIN_DEBUG_TX);
+
+HardwareSerial& radioPort() { return radioSerial; }
+HardwareSerial& debugPort() { return debugSerial; }
 
 // Sends one boot-time AT command, retrying briefly rather than trusting a
 // single fixed delay: the radio's own boot sequence (oscillator startup,
@@ -33,18 +37,57 @@ static bool sendBootCommandWithRetry(const char* cmd, const char* label) {
     return ok;
 }
 
-void radioInit() {
+static void resetRadio() {
+    pinMode(PIN_RADIO_BOOT, INPUT); // BOOT low (R20) so it starts the app image
+    pinMode(PIN_RADIO_RST, OUTPUT);
+    digitalWrite(PIN_RADIO_RST, LOW);
+    delay(10);
+    digitalWrite(PIN_RADIO_RST, HIGH);
+    delay(500); // let the module boot before talking to it
+}
+
+// True if the module answers like Software/RA08H_p2p_bridge. Only that
+// firmware replies "+RFCFG:" to AT+RFCFG? - the stock LoRaWAN image (or a
+// blank module, which is silent) does not.
+static bool radioIsP2p() {
+    char resp[96];
+    for (int attempt = 0; attempt < 5; attempt++) {
+        // Collect everything that arrives for a short window rather than just
+        // the first line: the P2P firmware prints its boot log once at
+        // power-up, and a stray log line must not be mistaken for the reply
+        // (a false "not P2P" verdict would trigger a needless reflash).
+        while (radioSerial.available()) radioSerial.read();
+        radioSerial.print("AT+RFCFG?\r\n");
+        size_t n = 0;
+        uint32_t start = millis();
+        while (millis() - start < 250 && n < sizeof(resp) - 1) {
+            if (radioSerial.available()) resp[n++] = radioSerial.read();
+        }
+        resp[n] = '\0';
+        if (strstr(resp, "+RFCFG:") != nullptr) return true;
+        delay(150);
+    }
+    return false;
+}
+
+bool radioInit() {
     debugSerial.begin(115200);
     // 9600, not 115200: the module's AT interface sits on its LPUART, whose
     // baud rate cannot exceed 9600. Hardware limit of the RA-08H, not a
     // preference - see Software/RA08H_p2p_bridge/README.md.
     radioSerial.begin(RADIO_BAUD);
 
-    pinMode(PIN_RADIO_RST, OUTPUT);
-    digitalWrite(PIN_RADIO_RST, LOW);
-    delay(10);
-    digitalWrite(PIN_RADIO_RST, HIGH);
-    delay(500); // let the module boot before talking to it
+    resetRadio();
+
+    if (!radioIsP2p()) {
+        debugSerial.println("[radio] no P2P firmware detected");
+        if (!radioFlashFirmware()) return false;
+        resetRadio();
+        if (!radioIsP2p()) {
+            debugSerial.println("[radio] still no answer after flashing");
+            return false;
+        }
+    }
 
     // The radio doesn't persist RF settings across resets - it always comes
     // up on its own compiled-in defaults - so push the desired config (see
@@ -52,13 +95,14 @@ void radioInit() {
     // STM32 (fast, ST-Link only) rather than the radio itself.
     char rfCfgCmd[48];
     snprintf(rfCfgCmd, sizeof(rfCfgCmd), "AT+RFCFG=%d,%d,%d,%d", RF_TX_POWER, RF_SF, RF_BW, RF_CR);
-    sendBootCommandWithRetry(rfCfgCmd, "RFCFG");
+    bool ok = sendBootCommandWithRetry(rfCfgCmd, "RFCFG");
 
     char rxModeCmd[24];
     snprintf(rxModeCmd, sizeof(rxModeCmd), "AT+RXMODE=%d", RF_RX_MODE);
-    sendBootCommandWithRetry(rxModeCmd, "RXMODE");
+    ok = sendBootCommandWithRetry(rxModeCmd, "RXMODE") && ok;
 
     debugSerial.println("[radio] init complete");
+    return ok;
 }
 
 size_t radioSendATCommand(const char* cmd, char* respBuf, size_t bufLen, uint32_t timeoutMs) {

@@ -357,6 +357,14 @@ void initNetwork() {
       json += "\"wifiSSID\":\"" + configuredSSID + "\",";
       json += "\"timerName\":\"" + timerName + "\",";
       json += "\"loraRadioPresent\":" + String(loraRadioPresent() ? "true" : "false") + ",";
+      // Battery (mV, 0 = unknown) and seconds since last heard (-1 = never)
+      // for each paired LoRa remote.
+      json += "\"judgeBattMv\":" + String(loraBatteryMv(ROLE_JUDGE)) + ",";
+      json += "\"judgeHeardAgo\":" + String(loraSecondsSinceHeard(ROLE_JUDGE)) + ",";
+      json += "\"redBattMv\":" + String(loraBatteryMv(ROLE_RED_READY)) + ",";
+      json += "\"redHeardAgo\":" + String(loraSecondsSinceHeard(ROLE_RED_READY)) + ",";
+      json += "\"blueBattMv\":" + String(loraBatteryMv(ROLE_BLUE_READY)) + ",";
+      json += "\"blueHeardAgo\":" + String(loraSecondsSinceHeard(ROLE_BLUE_READY)) + ",";
 
       char hexColor[7];
       snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", digitColor.r, digitColor.g, digitColor.b);

@@ -7,7 +7,7 @@
     "framework_extra_flags": {
       "arduino": "-D__CORTEX_SC=0"
     },
-    "mcu": "stm32g030k6",
+    "mcu": "stm32g030k8",
     "product_line": "STM32G030xx",
     "variant": "STM32G0xx/G030K(6-8)T"
   },
@@ -15,7 +15,7 @@
     "default_tools": [
       "stlink"
     ],
-    "jlink_device": "STM32G030K6",
+    "jlink_device": "STM32G030K8",
     "onboard_tools": [
       "stlink"
     ],
@@ -27,10 +27,10 @@
     "cmsis",
     "stm32cube"
   ],
-  "name": "TimerRemote (STM32G030K6T6, custom board)",
+  "name": "TimerRemote (STM32G030K8T6, custom board)",
   "upload": {
     "maximum_ram_size": 8192,
-    "maximum_size": 32768,
+    "maximum_size": 65536,
     "protocol": "stlink",
     "protocols": [
       "blackmagic",
@@ -42,6 +42,6 @@
       "mbed"
     ]
   },
-  "url": "https://www.st.com/resource/en/datasheet/stm32g030k6.pdf",
+  "url": "https://www.st.com/resource/en/datasheet/stm32g030k8.pdf",
   "vendor": "ST"
 }

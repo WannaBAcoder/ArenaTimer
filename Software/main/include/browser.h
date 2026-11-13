@@ -390,9 +390,9 @@ const char* html = R"rawliteral(
                         if (data.pairing && data.pairingSecondsLeft !== undefined) {
                             document.getElementById('pairingCountdown').textContent = data.pairingSecondsLeft;
                         }
-                        updateStatus('redStat', data.red, data.redLora, data.redEspNow);
-                        updateStatus('blueStat', data.blue, data.blueLora, data.blueEspNow);
-                        updateStatus('judgeStat', data.judge, data.judgeLora, data.judgeEspNow);
+                        updateStatus('redStat', data.red, data.redLora, data.redEspNow, data.redBattMv, data.redHeardAgo);
+                        updateStatus('blueStat', data.blue, data.blueLora, data.blueEspNow, data.blueBattMv, data.blueHeardAgo);
+                        updateStatus('judgeStat', data.judge, data.judgeLora, data.judgeEspNow, data.judgeBattMv, data.judgeHeardAgo);
                         if (data.loraRadioPresent !== undefined) {
                             const el = document.getElementById('loraRadioStat');
                             el.textContent = data.loraRadioPresent ? 'Detected' : 'Not detected (ESP-NOW only)';
@@ -576,7 +576,22 @@ const char* html = R"rawliteral(
                     .catch(e => console.error(e));
             }, 1000);
 
-            function updateStatus(id, isPaired, viaLora, viaEspNow) {
+            // Rough LiPo state of charge from resting voltage. Good enough to
+            // tell "charge it soon", not a fuel gauge.
+            function battPercent(mv) {
+                const pts = [[3300, 0], [3500, 10], [3600, 20], [3700, 40], [3780, 60], [3850, 70], [3950, 80], [4050, 90], [4200, 100]];
+                if (mv <= pts[0][0]) return 0;
+                if (mv >= pts[pts.length - 1][0]) return 100;
+                for (let i = 1; i < pts.length; i++) {
+                    if (mv <= pts[i][0]) {
+                        const f = (mv - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]);
+                        return Math.round(pts[i - 1][1] + f * (pts[i][1] - pts[i - 1][1]));
+                    }
+                }
+                return 100;
+            }
+
+            function updateStatus(id, isPaired, viaLora, viaEspNow, battMv, heardAgo) {
                 let el = document.getElementById(id);
                 if (!isPaired) {
                     el.textContent = 'OPEN';
@@ -584,8 +599,17 @@ const char* html = R"rawliteral(
                     return;
                 }
                 let via = (viaLora && viaEspNow) ? 'LoRa+ESP-NOW' : viaLora ? 'LoRa' : 'ESP-NOW';
-                el.textContent = `PAIRED (${via})`;
-                el.style.color = 'green';
+                let text = `PAIRED (${via})`;
+                // Battery is only reported by LoRa remotes, and only once heard
+                // since this timer booted.
+                if (viaLora && battMv > 0) {
+                    const pct = battPercent(battMv);
+                    text += ` ${(battMv / 1000).toFixed(2)}V ${pct}%`;
+                    // Remotes report about once a minute; flag one that has gone quiet.
+                    if (heardAgo > 300) text += ` (${Math.round(heardAgo / 60)}m ago)`;
+                }
+                el.textContent = text;
+                el.style.color = (viaLora && battMv > 0 && battPercent(battMv) <= 20) ? 'orange' : 'green';
             }
         </script>
     </body>

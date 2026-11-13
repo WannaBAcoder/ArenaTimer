@@ -2,6 +2,7 @@
 #include "config.h"
 #include "packet.h"
 #include "rfConfig.h"
+#include "radioFlash.h"
 #include <string.h>
 
 // RA-08H is UART-only on this board (see PCB Files/ESP32_Lora netlist) - no
@@ -21,6 +22,29 @@ static size_t lineLen = 0;
 
 static bool radioPresent = false;
 bool loraRadioPresent() { return radioPresent; }
+
+// Last battery report / last time anything was heard, per role (index =
+// role - 1: judge, red, blue). Only ever set for the PAIRED remote of that
+// role, and RAM-only - after a timer reboot they read "never" until the
+// remote's next status frame or button press.
+static uint16_t remoteBatteryMv[3] = {0, 0, 0};
+static uint32_t remoteHeardMs[3] = {0, 0, 0};
+static bool remoteHeardEver[3] = {false, false, false};
+
+static void markHeard(uint8_t role) {
+    if (role < 1 || role > 3) return;
+    remoteHeardMs[role - 1] = millis();
+    remoteHeardEver[role - 1] = true;
+}
+
+uint16_t loraBatteryMv(uint8_t role) {
+    return (role >= 1 && role <= 3) ? remoteBatteryMv[role - 1] : 0;
+}
+
+int32_t loraSecondsSinceHeard(uint8_t role) {
+    if (role < 1 || role > 3 || !remoteHeardEver[role - 1]) return -1;
+    return (int32_t)((millis() - remoteHeardMs[role - 1]) / 1000UL);
+}
 
 static bool hexDecode(const char* hex, size_t hexLen, uint8_t* out, size_t outLen) {
     if (hexLen != outLen * 2) return false;
@@ -116,6 +140,7 @@ static void handlePacket(const RemotePacket& pkt) {
     switch (pkt.role) {
         case ROLE_RED_READY:
             if (redLoraPaired && memcmp(pkt.deviceId, redID, 4) == 0) {
+                markHeard(ROLE_RED_READY);
                 if (currentState == RUNNING) {
                     queueCommand("tapoutRed");
                 } else {
@@ -128,6 +153,7 @@ static void handlePacket(const RemotePacket& pkt) {
 
         case ROLE_BLUE_READY:
             if (blueLoraPaired && memcmp(pkt.deviceId, blueID, 4) == 0) {
+                markHeard(ROLE_BLUE_READY);
                 if (currentState == RUNNING) {
                     queueCommand("tapoutBlue");
                 } else {
@@ -140,6 +166,7 @@ static void handlePacket(const RemotePacket& pkt) {
 
         case ROLE_JUDGE:
             if (judgeLoraPaired && memcmp(pkt.deviceId, judgeID, 4) == 0) {
+                markHeard(ROLE_JUDGE);
                 switch (pkt.buttonId) {
                     case BTN_START: queueCommand("start"); break;
                     case BTN_PAUSE: queueCommand("pause"); break;
@@ -158,6 +185,27 @@ static void handlePacket(const RemotePacket& pkt) {
     }
 }
 
+// Battery/status frame from a remote (see packet.h). Never used for pairing -
+// only a real button press pairs a remote - and only recorded for a remote
+// that is already paired to this timer.
+static void handleStatus(const RemoteStatusPacket& pkt) {
+    if (pkt.buttonId != BTN_STATUS) return;
+
+    const uint8_t* expected = nullptr;
+    bool paired = false;
+    switch (pkt.role) {
+        case ROLE_RED_READY: expected = redID; paired = redLoraPaired; break;
+        case ROLE_BLUE_READY: expected = blueID; paired = blueLoraPaired; break;
+        case ROLE_JUDGE: expected = judgeID; paired = judgeLoraPaired; break;
+        default: return;
+    }
+    if (!paired || memcmp(pkt.deviceId, expected, 4) != 0) return;
+
+    remoteBatteryMv[pkt.role - 1] = batteryCodeToMv(pkt.battery);
+    markHeard(pkt.role);
+    DEBUG_LOG("[LORA] role %u battery %u mV\n", pkt.role, batteryCodeToMv(pkt.battery));
+}
+
 static void handleRadioLine(const char* line) {
     DEBUG_LOG("[LORA RX] %s\n", line);
 
@@ -169,14 +217,57 @@ static void handleRadioLine(const char* line) {
     const char* q2 = strchr(q1 + 1, '"');
     if (!q2) return;
 
-    RemotePacket pkt;
-    if (hexDecode(q1 + 1, q2 - (q1 + 1), reinterpret_cast<uint8_t*>(&pkt), sizeof(pkt))) {
-        handlePacket(pkt);
+    // Frames are told apart by length: 6 bytes = button press (the original
+    // format), 7 bytes = status frame. Anything else is ignored, so a timer
+    // running this code also ignores any frame type added in the future.
+    const size_t hexLen = q2 - (q1 + 1);
+    if (hexLen == sizeof(RemotePacket) * 2) {
+        RemotePacket pkt;
+        if (hexDecode(q1 + 1, hexLen, reinterpret_cast<uint8_t*>(&pkt), sizeof(pkt))) {
+            handlePacket(pkt);
+        }
+    } else if (hexLen == sizeof(RemoteStatusPacket) * 2) {
+        RemoteStatusPacket pkt;
+        if (hexDecode(q1 + 1, hexLen, reinterpret_cast<uint8_t*>(&pkt), sizeof(pkt))) {
+            handleStatus(pkt);
+        }
     }
 
     // No re-arm command needed: RA08H_p2p_bridge re-arms Radio.Rx() itself on
     // every packet/timeout, and has no "AT+TEST=RXLRPKT" command at all -
     // sending one just draws a harmless but noisy "ERROR" reply from it.
+}
+
+static void resetRadio() {
+    // BOOT low starts the app image. The board's external pull-down is the real
+    // hold; the internal one is a backstop if that resistor is missing.
+    pinMode(RADIO_BOOT_PIN, INPUT_PULLDOWN);
+    pinMode(RADIO_RST_PIN, OUTPUT);
+    digitalWrite(RADIO_RST_PIN, LOW);
+    delay(10);
+    digitalWrite(RADIO_RST_PIN, HIGH);
+    delay(500); // let the module boot before talking to it
+}
+
+// True if the module answers like Software/RA08H_p2p_bridge. Only that
+// firmware replies "+RFCFG:" to AT+RFCFG? - the stock LoRaWAN image, or a
+// blank module (silent), does not. Collects a short window of output rather
+// than the first line so a boot-log line is not mistaken for the reply.
+static bool radioIsP2p() {
+    char resp[96];
+    for (int attempt = 0; attempt < 5; attempt++) {
+        while (radioSerial.available()) radioSerial.read();
+        radioSerial.print("AT+RFCFG?\r\n");
+        size_t n = 0;
+        uint32_t start = millis();
+        while (millis() - start < 250 && n < sizeof(resp) - 1) {
+            if (radioSerial.available()) resp[n++] = radioSerial.read();
+        }
+        resp[n] = '\0';
+        if (strstr(resp, "+RFCFG:") != nullptr) return true;
+        delay(150);
+    }
+    return false;
 }
 
 void loraInit() {
@@ -185,11 +276,40 @@ void loraInit() {
     // not a preference - see Software/RA08H_p2p_bridge/README.md.
     radioSerial.begin(RADIO_BAUD, SERIAL_8N1, RADIO_UART_RX, RADIO_UART_TX);
 
-    pinMode(RADIO_RST_PIN, OUTPUT);
-    digitalWrite(RADIO_RST_PIN, LOW);
-    delay(10);
-    digitalWrite(RADIO_RST_PIN, HIGH);
-    delay(500); // let the module boot before talking to it
+    resetRadio();
+
+#ifdef RADIO_FLASH_TEST
+    // Bench test (env:radiotest): exercises the whole flash path on a radio
+    // that may already be programmed. Erase it, prove it went silent, flash
+    // it, prove it came back. Results are on one summary line at the end.
+    {
+        bool before = radioIsP2p();
+        Serial.printf("[TEST] 1 radio answers before: %s\n", before ? "yes" : "no");
+        bool erased = radioEraseFirmware(radioSerial);
+        resetRadio();
+        bool blank = !radioIsP2p();
+        Serial.printf("[TEST] 2 erase ok=%d, radio silent afterwards=%d\n", erased, blank);
+        bool flashed = radioFlashFirmware(radioSerial);
+        resetRadio();
+        bool back = radioIsP2p();
+        Serial.printf("[TEST] 3 flash ok=%d, radio answers again=%d\n", flashed, back);
+        Serial.printf("[TEST] RESULT: %s\n", (erased && blank && flashed && back) ? "PASS" : "FAIL");
+    }
+#endif
+
+#ifndef DISABLE_RADIO_AUTOFLASH
+    // Unprogrammed (or stock-firmware) radio: program the embedded P2P image,
+    // then restart it and check again. On a board without a radio or without
+    // the BOOT/RXD wiring the bootloader never answers; that costs a couple of
+    // seconds here and the code below then falls back to ESP-NOW only.
+    if (!radioIsP2p()) {
+        Serial.println("[LORA] no P2P firmware detected");
+        if (radioFlashFirmware(radioSerial)) {
+            resetRadio();
+            if (!radioIsP2p()) Serial.println("[LORA] still no answer after flashing");
+        }
+    }
+#endif
 
     // The radio doesn't persist RF settings across resets - it always comes
     // up on its own compiled-in defaults - so push the desired config (see
@@ -257,4 +377,7 @@ void loraClearRemotes() {
     memset(redID, 0, 4);
     memset(blueID, 0, 4);
     memset(judgeID, 0, 4);
+
+    memset(remoteBatteryMv, 0, sizeof(remoteBatteryMv));
+    memset(remoteHeardEver, 0, sizeof(remoteHeardEver));
 }

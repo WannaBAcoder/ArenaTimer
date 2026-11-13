@@ -30,6 +30,12 @@
 // RA-08H LoRa module (replaces ESP-NOW), see PCB Files/ESP32_Lora netlist.
 // UART2: GPIO23 TX (-> module LPRXD), GPIO22 RX (<- module TXD).
 #define RADIO_RST_PIN 25
+// RA-08H BOOT (module pin 15). Held HIGH across a radio reset to enter the ROM
+// bootloader so the ESP32 can program the radio (radioFlash.cpp). Needs an
+// external pull-down on the module's BOOT pin (JP1 jumper to GND removed) and
+// module pins 10 and 12 tied together. Left as an input otherwise. Boards
+// without that wiring just fail to sync and run without the auto-flash.
+#define RADIO_BOOT_PIN 26
 #define RADIO_UART_TX 23
 #define RADIO_UART_RX 22
 // Hard limit: the module's AT interface runs on its LPUART, which cannot
